@@ -1,0 +1,451 @@
+Satellite 1,NORAD ID 1,Altitude Range [km],Satellite 2,NORAD ID 2,Altitude Range [km],"Conjunction Node Position [eci, km]",Collision Point A or B,Conjunction Point Altitude [km],Will they Collide?,Time Until Collision [days],Synodic Period [days],Collision Frequency [1/days]
+VANGUARD 2,11,"[6933.294117076832, 9292.532561274444]",STARLINK-30842,58357,"[6938.2305583440075, 6940.025016789873]",[5278.11661109 2580.82124805 3693.39482873],0,561.6265864299503,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+VANGUARD 3,20,"[6887.386830897937, 9607.117878340629]",SHIJIAN 6 03B (SJ-6 03B),33409,"[6930.702558534596, 6954.149908896347]",[  289.88982549 -5813.6973042  -3764.59615097],0,554.0557725365497,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 7,22,"[6840.366109422256, 6987.372951702796]",STARLINK-5034,53888,"[6916.903603142928, 6919.265437198113]",[-5036.78414498  2340.86002213 -4126.315616  ],0,541.0609830851745,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 7,22,"[6840.366109422256, 6987.372951702796]",STARLINK-5024,53901,"[6916.958941766405, 6919.218389524604]",[-5036.53486973  2353.77002563 -4119.00552617],0,540.9036381352907,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 7,22,"[6840.366109422256, 6987.372951702796]",STARLINK-6296,56773,"[6946.307771397581, 6949.951370544599]",[-4699.14087294  -134.4033922  -5114.41017794],0,568.6018524217925,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 7,22,"[6840.366109422256, 6987.372951702796]",GREGOIRE,56946,"[6867.669366606345, 6880.649154121764]",[4199.08042506 1378.78864274 5256.7990918 ],0,489.70627347641675,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 7,22,"[6840.366109422256, 6987.372951702796]",ALISIO-1,58562,"[6911.972445963122, 6921.05521192329]",[ 5005.13242119 -2898.14318377  3788.35109807],0,535.7756773151923,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+TIROS 1,29,"[7002.583465872548, 7034.251970300098]",KINEIS-1B,60079,"[7008.801844624672, 7012.36883044441]",[  776.06079416 -5570.36462726  4182.51559013],0,630.7622786684542,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+SOLRAD 1 (GREB),46,"[6955.222661063281, 7231.963590969943]",VRSS-1,38782,"[6997.360229262172, 7024.906973181372]",[ -872.89358802 -2737.17486851  6389.35979487],0,627.431361316404,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+SOLRAD 1 (GREB),46,"[6955.222661063281, 7231.963590969943]",LQSAT,40958,"[7007.084312790381, 7032.628165673699]",[ -101.45525119 -3191.56777222  6251.5994301 ],0,641.755694836661,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 11,107,"[6846.353725506709, 7590.770848794004]",CARTOSAT-1,28649,"[6978.859837320993, 6981.436908100199]",[ 4329.34061544 -5153.19031827 -1849.19978647],0,601.6982753572647,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 11,107,"[6846.353725506709, 7590.770848794004]",ST5-C,28982,"[6644.36267993736, 8444.6492967944]",[3990.4823439  4752.76813416 3203.21357633],0,605.6536247018994,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 11,107,"[6846.353725506709, 7590.770848794004]",MINXSS-2,43758,"[6893.168742166583, 6913.035870604359]",[ 5934.52792397 -3443.53918704  -665.1055063 ],0,515.26195462332,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+EXPLORER 11,107,"[6846.353725506709, 7590.770848794004]",STARLINK-3219,49724,"[6916.8168976151055, 6919.43748419502]",[5293.24859932 3473.4072069  2786.88228564],0,539.2144608689505,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+TIROS 3,162,"[7090.180096196325, 7153.3072320350475]",OV2-1,1641,"[7080.5627731566365, 7107.009827241037]",[-5127.14596989 -3113.66679935 -3790.83753344],0,717.8474939867137,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+TIROS 3,162,"[7090.180096196325, 7153.3072320350475]",ERS 1,21574,"[7115.126134703756, 7160.774755389921]",[  186.87537388 -4781.68379032 -5269.27765198],0,739.7776700144204,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+TIROS 5,309,"[6937.457022958638, 7210.181041935603]",STARLINK-6175,56882,"[6938.09334630379, 6940.170922464824]",[-4913.54636894  1597.26663837  4633.88805204],0,562.1163896508369,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"
+TIROS 5,309,"[6937.457022958638, 7210.181041935603]",STARLINK-6169,56889,"[6938.116912039698, 6940.208375660555]",[-4912.55422811  1598.05053886  4634.66100975],0,562.1106356556065,False,,"[[           nan 7.26395747e+01 1.89384754e+01 ...            nan
+             nan 8.08883329e+01]
+ [           nan            nan 8.29057313e+01 ...            nan
+             nan 2.31204329e+01]
+ [           nan            nan            nan ...            nan
+             nan 6.62184501e-02]
+ ...
+ [           nan            nan            nan ...            nan
+  6.33663335e-02            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]","[[           nan 1.37666004e-02 5.28025608e-02 ...            nan
+             nan 1.23627223e-02]
+ [           nan            nan 1.20618923e-02 ...            nan
+             nan 4.32517854e-02]
+ [           nan            nan            nan ...            nan
+             nan 1.51015314e+01]
+ ...
+ [           nan            nan            nan ...            nan
+  1.57812508e+01            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]
+ [           nan            nan            nan ...            nan
+             nan            nan]]"

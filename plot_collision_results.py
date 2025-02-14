@@ -12,7 +12,7 @@ from tabulate import tabulate
 plt.rcParams['font.sans-serif'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 import matplotlib.colors as mcolors
-import matplotlib 
+import matplotlib as mpl
 # matplotlib.use('Agg') # Set a non-interactive backend like 'Agg' 
 
 # don't display any plots 
@@ -33,7 +33,7 @@ def eci2lla(x,y,z, t_dt):
     g = wgs84.subpoint(p)
     return g.latitude.degrees, g.longitude.degrees, g.elevation.m
 
-data = read_csv('collision_results_math_fixed.csv')  
+data = read_csv("data/collision_results_wp_0p1_1.csv")  
 
 # for each line in the data file, check to see if the synodic period is less than 90 days. If so, keep it, otherwise discard it.
 # data_shortened = []
@@ -47,25 +47,55 @@ data = read_csv('collision_results_math_fixed.csv')
 #     writer = csv.writer(f)
 #     writer.writerows(data_shortened)
 
-
+r_e = 6378.137 # radius of the Earth in km
 # data is a list of lists. Make it into a 2d np array
 data_np = np.array(data)
 name1 = data_np[1:, 0]
 norad1 = (data_np[1:, 1]).astype(int)
-name2 = data_np[1:, 2]
-norad2 = (data_np[1:, 3]).astype(int)
-cnode_pos_str = data_np[1:, 4]
+alt_range1_str = data_np[1:, 2]
+alt_range1 = np.zeros((len(alt_range1_str), 2))
+for i in range(len(alt_range1_str)):
+    items = (alt_range1_str[i][1:-1]).split()
+    alt_range1[i,:] = np.array([float(items[0][:-1])-r_e, float(items[1])-r_e])
+# assign alt_range to a dictionary where the key is the corresponding norad ID. If the norad ID is already in the dictionary, skip it. 
+name2 = data_np[1:, 3]
+norad2 = (data_np[1:, 4]).astype(int)
+alt_range2_str = data_np[1:, 5]
+alt_range2 = np.zeros((len(alt_range2_str), 2))
+for i in range(len(alt_range2_str)):
+    items = (alt_range2_str[i][1:-1]).split()
+    alt_range2[i,:] = np.array([float(items[0][:-1])-r_e, float(items[1])-r_e])
+
+alt_range_dict = {}
+for i in range(len(norad1)):
+    if norad1[i] not in alt_range_dict:
+        alt_range_dict[norad1[i]] = alt_range1[i]
+    else:
+        continue
+for i in range(len(norad2)):
+    if norad2[i] not in alt_range_dict:
+        alt_range_dict[norad2[i]] = alt_range2[i]
+    else:
+        continue
+
+cnode_pos_str = data_np[1:, 6]
 cnode_pos = np.zeros((len(cnode_pos_str), 3))
 for i in range(len(cnode_pos_str)):
     items = (cnode_pos_str[i][1:-1]).split()
     cnode_pos[i,:] = np.array([float(items[0]), float(items[1]), float(items[2])])
 # Convert the list of lists to a 2D numpy array
-cnode_alt = (data_np[1:, 6]).astype(float)
-collision_yn = data_np[1:, 7]
-ttc = np.where(data_np[1:, 8] == '', '0', data_np[1:, 8]).astype(float)
-t_s = (data_np[1:, 9]).astype(float)
+cnode_alt = np.where(data_np[1:, 8] == '', '0.0', data_np[1:, 8]).astype(float)
+collision_yn = data_np[1:, 9]
+ttc = np.where(data_np[1:, 10] == '', '0', data_np[1:, 10]).astype(float)
+t_s = (data_np[1:, 11]).astype(float)
 print(np.argmin(t_s[t_s != 0]))
-freq_col = (data_np[1:, 10]).astype(float)*(365.25/12) # collision frequency per month
+freq_col = (data_np[1:, 12]).astype(float)*(365.25/12) # collision frequency per month
+
+# plot a histogram of t_s to see the distribution of synodic periods
+plt.figure()
+plt.hist(t_s[ttc != 0], bins = 100)
+plt.xlabel('LCM Period (days)')
+plt.show()
 
 t_s_no = t_s[t_s != 0]
 t_s_no_s = t_s_no[t_s_no < 90]
@@ -85,8 +115,6 @@ latitude = np.arcsin(cnode_pos[:, 2] / r) * (180 / np.pi)  # Convert from radian
 #     print(i/len(cnode_alt)*100, '% done')
 
 
-
-
 # remove zero entries from ttc
 idx_y_col = np.where(ttc != 0 )
 # idx_y_col_sml = np.where((ttc != 0))
@@ -97,7 +125,7 @@ t_s_y_col = t_s[idx_y_col_sml]
 # ttc_s = ttc[idx_y_col_sml]
 
 
-plt_figs = False
+plt_figs = True
 if plt_figs == True:
 
     plt.figure()
@@ -105,6 +133,7 @@ if plt_figs == True:
     # plt.yscale('log')
     plt.xlabel('Time to collision (s)')
     plt.ylabel('Number of conjunctions')
+    plt.savefig('figures/1.pdf')
     plt.show()
 
 
@@ -117,21 +146,49 @@ if plt_figs == True:
     # make a 3d scatter plot of cnode_pos, where the color is determined by col_freq
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    sc = ax.scatter(cnode_pos[:, 0], cnode_pos[:, 1], cnode_pos[:, 2], s = 2, c=freq_col, cmap='jet', norm = mcolors.LogNorm())
+    sc = ax.scatter(cnode_pos[:, 0], cnode_pos[:, 1], cnode_pos[:, 2], s = 2, c='r')
+    # plot a 3D sphere for the earth
+    u, v = np.mgrid[0:2*np.pi:100j, 0:np.pi:500j]
+    x = r_e*np.cos(u)*np.sin(v)
+    y = r_e*np.sin(u)*np.sin(v)
+    z = r_e*np.cos(v)
+    ax.plot_surface(x, y, z, color = 'cornflowerblue', alpha = 0.5)
     # make the plot background white
     ax.set_xlabel('X (km)')
     ax.set_ylabel('Y (km)')
     ax.set_zlabel('Z (km)')
     plt.axis('equal')
-    plt.colorbar(sc, label = 'Conjunction frequency (per month)')
+    # plt.colorbar(sc, label = 'Conjunction frequency (per month)')
     ax.set_facecolor('white')
+    # make the background of the plot white
+    ax.xaxis.pane.fill = False
+    ax.yaxis.pane.fill = False
+    ax.zaxis.pane.fill = False
+    # remove axis color
+    ax.xaxis.pane.set_edgecolor('w')
+    ax.yaxis.pane.set_edgecolor('w')
+    ax.zaxis.pane.set_edgecolor('w')
+    ax.grid(False)
+    plt.savefig('figures/2.pdf')
+    plt.tight_layout()
+    plt.show()
+
+    # make a histogram of conjunction frequency
+    plt.figure(figsize = (4,3))
+    plt.hist(col_freq, bins = 200, color = 'firebrick', alpha = 0.5)
+    plt.yscale('log')
+    plt.xlabel('Nodal conjunction frequency (monthly)')
+    plt.ylabel('Count')
+    plt.tight_layout()
     plt.show()
 
     plt.figure(figsize = (4,3))
-    plt.semilogy(latitude[idx_y_col_sml], col_freq, '.', markersize = 4, color = 'firebrick', alpha = 0.5)
+    plt.plot(latitude[idx_y_col_sml], col_freq, '.', markersize = 4, color = 'firebrick', alpha = 0.5)
     plt.xlabel('Latitude (deg)')
-    plt.ylabel('Conjunction frequency (per month)')
+    plt.ylim(0,2)
+    plt.ylabel('Nodal conjunction frequency (monthly)')
     plt.tight_layout()
+    plt.savefig('figures/3.pdf')
     plt.show()
 
     plt.figure(figsize = (4, 1.5))
@@ -139,6 +196,7 @@ if plt_figs == True:
     plt.xlabel('Latitude (deg)')
     plt.ylabel('Count')
     plt.tight_layout()
+    plt.savefig('figures/4.pdf')
     plt.show()
 
     # reapeat plot above but make it a 2d histogram
@@ -151,29 +209,32 @@ if plt_figs == True:
 
 
     # plot the histogram of cnode_pos_lla by latitude
-    plt.figure(figsize = (4,2))
-    plt.grid(axis = 'y', color = 'k')
-    # make sure grid is behind the bars
-    plt.gca().set_axisbelow(True)
-    plt.hist(latitude[idx_y_col_sml], bins=100, color = 'r')
-    plt.xlabel('Latitude (deg)')
-    plt.ylabel('Count')
-    # make all outside borders transparent
-    plt.gca().spines['top'].set_visible(False)
-    plt.gca().spines['right'].set_visible(False)
-    plt.gca().spines['left'].set_visible(False)
-    # make y axis on the right
-    plt.gca().yaxis.tick_right()
-    # same for label
-    plt.gca().yaxis.set_label_position("right")
-    plt.tight_layout()
-    plt.show()
+    # plt.figure(figsize = (4,2))
+    # plt.grid(axis = 'y', color = 'k')
+    # # make sure grid is behind the bars
+    # plt.gca().set_axisbelow(True)
+    # plt.hist(latitude[idx_y_col_sml], bins=100, color = 'r')
+    # plt.xlabel('Latitude (deg)')
+    # plt.ylabel('Count')
+    # # make all outside borders transparent
+    # plt.gca().spines['top'].set_visible(False)
+    # plt.gca().spines['right'].set_visible(False)
+    # plt.gca().spines['left'].set_visible(False)
+    # # make y axis on the right
+    # plt.gca().yaxis.tick_right()
+    # # same for label
+    # plt.gca().yaxis.set_label_position("right")
+    # plt.tight_layout()
+    # plt.savefig('figures/5.png')
+    # plt.show()
 
     plt.figure(figsize = (4,3))
-    plt.semilogy(cnode_alt[idx_y_col_sml], col_freq, '.', markersize = 2, color = 'darkcyan', alpha = 0.5)
+    plt.plot(cnode_alt[idx_y_col_sml], col_freq, '.', markersize = 2, color = 'darkcyan', alpha = 0.5)
     plt.xlabel('Altitude (km)')
-    plt.ylabel('Conjunction frequency (per month)')
+    plt.ylim(0,2)
+    plt.ylabel('Conjunction frequency (monthly)')
     plt.tight_layout()
+    plt.savefig('figures/6.pdf')
     plt.show()
 
     plt.figure(figsize = (4, 1.5))
@@ -181,6 +242,7 @@ if plt_figs == True:
     plt.xlabel('Altitude (km)')
     plt.ylabel('Count')
     plt.tight_layout()
+    plt.savefig('figures/7.pdf')
     plt.show()
 
     # do the same for altitude
@@ -201,6 +263,7 @@ if plt_figs == True:
     # same for label
     plt.gca().yaxis.set_label_position("right")
     plt.tight_layout()
+    plt.savefig('figures/8.pdf')
     plt.show()
 
     # # plot the CDF of ttc
@@ -249,6 +312,8 @@ print(np.sum(starlink_conj_both)/len(starlink_conj)*100, '% of conjunctions invo
 
 # get a list of the unique norad ids across norad1 and norad2
 norad = np.unique(np.concatenate((norad1[idx_y_col_sml], norad2[idx_y_col_sml])))
+# get alt_range for each unique norad
+alt_range = np.zeros((len(norad), 2))
 
 # for each norad in norad, find the name associated with that norad from either norad1 or norad2
 name = np.zeros(len(norad), dtype = object)
@@ -293,6 +358,8 @@ conj_count_rank = conj_count[idx_rank]
 # perc_sec_starlink = perc_sec_starlink[idx_rank]
 name_sec_rank = [name_sec[i] for i in idx_rank]
 alt_node_rank = [alt_node[i] for i in idx_rank]
+alt_range_rank = np.concatenate((alt_range1, alt_range2), axis = 0)[idx_rank]
+
 
 # print the top 10
 # for i in range(10):
@@ -320,6 +387,7 @@ plt.hist(conj_count, bins = 100)
 plt.yscale('log')
 plt.xlabel('Number of conjunctions per satellite')
 plt.ylabel('Number of satellites')
+plt.savefig('figures/9.pdf')
 plt.show()
 
 sum_conj_freq_full = np.zeros(10854)
@@ -327,12 +395,13 @@ sum_conj_freq_full[:len(sum_conj_freq)] = sum_conj_freq
 plt.figure(figsize = (3.5,4))
 plt.ecdf(sum_conj_freq_full, color = 'darkcyan', linewidth = 2)
 plt.grid(axis = 'both', color = 'gray', linewidth = 0.25)
-plt.axvline(x = 5, color = 'r', linestyle = '--', linewidth = 2)
+plt.axvline(x = 10, color = 'r', linestyle = '--', linewidth = 2)
 plt.ylabel('Cumulative probability')
 plt.xlabel('Sat. conj. freq. (monthly)')
 plt.ylim(0,1)
 plt.xlim(-0.25,5.5)
 plt.tight_layout()
+plt.savefig('figures/10.pdf')
 plt.show()
 
 plt.figure(figsize = (3.7,4))
@@ -342,6 +411,7 @@ plt.ylim(0.99,1)
 plt.ylabel('Cumulative probability')
 plt.xlabel('Sat. conj. freq. (monthly)')
 plt.tight_layout()
+plt.savefig('figures/11.pdf')
 plt.show()
 
 # plot a histogram of the sum of the col_freq for each satellite
@@ -356,35 +426,50 @@ plt.show()
 
 # print a table of the top 10 arrays in name_sec_rank. i.e. 1: [], 2:[]...
 # Data for the table
-for i in range(10):
+num_obj_plot = 15
+for i in range(num_obj_plot):
     print(i + 1, name_sec_rank[i])
 # print a 
 
 # plot top 10 by per and apogee
 # r_p = np.array([304.6, 531.6, 388, 560, 383.8, 484.4, 573.6, 421.9, 528.9, 320.6])
 # r_a = np.array([3119.1, 2031.8, 1721.7, 2913.4, 1719.4, 1716.1, 829.3, 1564.7, 561.7, 1602.9])
-r_p = [517.4, 543.7, 545.9, 391.4, 544.6, 403.8, 565.4, 581.7, 584.1, 553.8]
-r_a = [538.2, 559.4, 547.8, 504.4, 564.1, 568.8, 567, 660.1, 587.3, 561.3]
+# r_p = [517.4, 543.7, 545.9, 391.4, 544.6, 403.8, 565.4, 581.7, 584.1, 553.8]
+# r_a = [538.2, 559.4, 547.8, 504.4, 564.1, 568.8, 567, 660.1, 587.3, 561.3]
+
+# r_p = alt_range_rank[:10, 0]
+# r_a = alt_range_rank[:10, 1]
+
+top_norads = norad_rank[:num_obj_plot]
+r_p = []
+r_a = []
+for i in range(num_obj_plot):
+    r_p.append(alt_range_dict[top_norads[i]][0])
+    r_a.append(alt_range_dict[top_norads[i]][1])
 
 # for 
 # matplotlib.use('TkAgg')
+
 plt.figure(figsize = (6,3))
-for i in range(10):
+for i in range(num_obj_plot):
     # plot a vertical line at x = i between y = per[i] and y = ap[i]
     plt.plot([i+1, i+1], [r_p[i], r_a[i]], 'k', linewidth = 3)
     # make a violin plot of the altitude of the conjunction nodes
     # plt.violinplot(alt_node_rank[i], positions = [i+1], showmedians = True, showextrema = False)
-    plt.plot(np.ones(len(alt_node_rank[i]))*(i+1), alt_node_rank[i], 'x', markersize = 6, color = 'r', alpha = 0.5)
+    plt.plot(np.ones(len(alt_node_rank[i]))*(i+1), alt_node_rank[i], 'x', markersize = 6, color = 'r', alpha = 0.6)
 # plt.axhline(y = 550, color = 'firebrick', linestyle = '--', alpha = 0.5)
 # plt.axhline(y = 1200, color = 'darkcyan', linestyle = '--', alpha = 0.5)
 # make sure every 1 x is labeled    
-plt.xticks(np.arange(11))
+plt.xticks(np.arange(num_obj_plot+1))
 plt.xlabel('Rank')
 # add a second x axis with the satellite names
-# plt.gca().set_xticklabels(name_rank[:11], rotation = 90)
+# set text size for xtick labels to be smaller
+mpl.rcParams.update({'font.size': 8})
+plt.gca().set_xticklabels(name_rank[:num_obj_plot+1], rotation = 90)
 plt.ylabel('Altitude (km)')
 # plt.legend()
 plt.tight_layout()
+plt.savefig('figures/12.pdf')
 plt.show()
 
 
