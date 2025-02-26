@@ -14,7 +14,7 @@ from scipy.signal import argrelextrema
 import csv
 import pandas as pd
 from fractions import Fraction
-from memory_profiler import profile
+# from memory_profiler import profile
 
 earth_radius = 6378.137  # km
 mu = 398600.435507  # km^3/s^2
@@ -102,7 +102,7 @@ def main():
 
     # Initialize variables
     n = len(sat_params)
-    parallel_compute = False
+    parallel_compute = True
 
     # Check to see if data file already exists
     try:
@@ -128,7 +128,7 @@ def main():
         print('Computing Conjunction Geometries!')
         # compute close approach distances for every object pair (don't repeat object pairs in reverse order)
         if parallel_compute == True:
-            max_workers = os.cpu_count() // 2
+            max_workers = os.cpu_count()
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(compute_conjunction_distance_v2, i, sat_params) for i in range(n)]
                 for idx, future in enumerate(futures):

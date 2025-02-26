@@ -33,7 +33,8 @@ def eci2lla(x,y,z, t_dt):
     g = wgs84.subpoint(p)
     return g.latitude.degrees, g.longitude.degrees, g.elevation.m
 
-data = read_csv("data/collision_results_wp_0p1_1.csv")  
+# data = read_csv("data/collision_results_wp_0p1_1.csv")  
+data = read_csv('data/collision_results_mh_test.csv')
 
 # for each line in the data file, check to see if the synodic period is less than 90 days. If so, keep it, otherwise discard it.
 # data_shortened = []
@@ -390,7 +391,7 @@ plt.ylabel('Number of satellites')
 plt.savefig('figures/9.pdf')
 plt.show()
 
-sum_conj_freq_full = np.zeros(10854)
+sum_conj_freq_full = np.zeros(26802)
 sum_conj_freq_full[:len(sum_conj_freq)] = sum_conj_freq
 plt.figure(figsize = (3.5,4))
 plt.ecdf(sum_conj_freq_full, color = 'darkcyan', linewidth = 2)
