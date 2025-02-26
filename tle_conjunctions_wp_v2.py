@@ -14,9 +14,11 @@ from scipy.signal import argrelextrema
 import csv
 import pandas as pd
 from fractions import Fraction
+from memory_profiler import profile
 
 earth_radius = 6378.137  # km
 mu = 398600.435507  # km^3/s^2
+
 
 def main():
     # Example TLEs
@@ -34,7 +36,7 @@ def main():
 
     except FileNotFoundError:
 
-        tle_file = open('3le_leo_092424.txt', 'r')
+        tle_file = open('3le_all_02262025.txt', 'r')
         tle_lines = tle_file.readlines()
 
         print('No sat param file found. Loading TLE parameters...')
@@ -48,8 +50,20 @@ def main():
         for i in range(int(len(tle_lines)/3)):
             obj_name[i] = tle_lines[3*i][2:-1]
             obj_norad[i] = int(tle_lines[3*i+1][2:7])
+
+            '''
+            try:
+            # Try to convert the value to an integer
+                obj_norad[i] = int(tle_lines[3*i+1][2:7])
+            except ValueError:
+            # If it fails (i.e., it's a string like "T0000"), store it as a string
+                obj_norad[i] = tle_lines[3*i+1][2:7]
+            #obj_norad[i] = tle_lines[3*i+1][2:7]
+            '''
+            
             tle_l1[i] = tle_lines[3*i+1][:-1]
             tle_l2[i] = tle_lines[3*i+2][:-1]
+        
 
             # get all the satellite orbit parameters from the TLEs. Store in a dictionary with the satellite norad id as the key
             satellite = get_satellite(tle_l1[i], tle_l2[i])
@@ -79,7 +93,7 @@ def main():
                 'norad': obj_norad[i]
             }
 
-            print(i/len(tle_lines)*3)
+            #print(i/len(tle_lines)*3)
 
         # save sat_params to a file
         with open('data/sat_params.pkl', 'wb') as f:
@@ -88,13 +102,14 @@ def main():
 
     # Initialize variables
     n = len(sat_params)
-    parallel_compute = True
+    parallel_compute = False
 
     # Check to see if data file already exists
     try:
-        with open('data/conj_params_wp2_' + str(n) + '.pkl', 'rb') as f:
+        with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'rb') as f:
             dist_a, dist_b, alt_a, alt_b, T_lcm = pickle.load(f)
             print('Loading conjunction parameters from file!')
+
     except FileNotFoundError:
 
         # Initialize variables
@@ -113,7 +128,8 @@ def main():
         print('Computing Conjunction Geometries!')
         # compute close approach distances for every object pair (don't repeat object pairs in reverse order)
         if parallel_compute == True:
-            with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+            max_workers = os.cpu_count() // 2
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(compute_conjunction_distance_v2, i, sat_params) for i in range(n)]
                 for idx, future in enumerate(futures):
                     dist_a[idx, :], dist_b[idx, :], alt_a[idx, :], alt_b[idx, :], T_lcm[idx, :] = future.result()
@@ -147,7 +163,7 @@ def main():
 
         # Save the results to a file
         try:
-            with open('data/conj_params_wp2_' + str(n) + '.pkl', 'wb') as f:
+            with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'wb') as f:
                 pickle.dump((dist_a, dist_b, alt_a, alt_b, T_lcm), f)
                 print(f"File 'data/conj_params_{n}.pkl' created!")
         except OSError as e:
@@ -215,11 +231,12 @@ def main():
     # Define the threshold distance for conjunction
     threshold = 0.1  # kilometers of miss distance
     t_tol = 1 # seconds of miss distance
+    LEO_cutoff = 2000 + earth_radius # km
 
     # Find pairs of satellites with distances below the threshold
     print("Number of conjunctions before filtering: ", str(len(sat_params)**2))
-    below_threshold_indices = np.where((dist_a < threshold) & (0.2*24*3600 < T_lcm))#(T_lcm < 90*24*3600)& 
-    below_threshold_indices_b = np.where((dist_b < threshold) &  (0.2*24*3600 < T_lcm)) #(T_lcm < 90*24*3600) &
+    below_threshold_indices = np.where((dist_a < threshold) & (0.2*24*3600 < T_lcm) & (alt_a < LEO_cutoff))#(T_lcm < 90*24*3600)& 
+    below_threshold_indices_b = np.where((dist_b < threshold) &  (0.2*24*3600 < T_lcm) & (alt_b < LEO_cutoff)) #(T_lcm < 90*24*3600) &
     print("Number of conjunctions after filtering: ", str(len(below_threshold_indices[0]) + len(below_threshold_indices_b[0])))
 
     # Filter unique pairs (i < j)
@@ -240,7 +257,7 @@ def main():
     saved_vars = []
 
     # Define output file
-    output_file = "data/collision_results_wp_0p1_1_no90.csv"
+    output_file = "data/collision_results_mh_test.csv"
 
     # Determine whether conjunctions occur
     for i, j in tqdm(below_threshold_pairs, desc="Processing Pairs", unit="pair"):
