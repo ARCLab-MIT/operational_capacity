@@ -13,6 +13,8 @@ plt.rcParams['font.sans-serif'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 import matplotlib.colors as mcolors
 import matplotlib as mpl
+import colorsys
+import matplotlib.colors as colors 
 # matplotlib.use('Agg') # Set a non-interactive backend like 'Agg' 
 
 # don't display any plots 
@@ -55,6 +57,7 @@ name1 = data_np[1:, 0]
 norad1 = (data_np[1:, 1]).astype(int)
 alt_range1_str = data_np[1:, 2]
 alt_range1 = np.zeros((len(alt_range1_str), 2))
+incl1 = (data_np[1:, 13]).astype(float)
 for i in range(len(alt_range1_str)):
     items = (alt_range1_str[i][1:-1]).split()
     alt_range1[i,:] = np.array([float(items[0][:-1])-r_e, float(items[1])-r_e])
@@ -63,11 +66,13 @@ name2 = data_np[1:, 3]
 norad2 = (data_np[1:, 4]).astype(int)
 alt_range2_str = data_np[1:, 5]
 alt_range2 = np.zeros((len(alt_range2_str), 2))
+incl2 = (data_np[1:, 14]).astype(float)
 for i in range(len(alt_range2_str)):
     items = (alt_range2_str[i][1:-1]).split()
     alt_range2[i,:] = np.array([float(items[0][:-1])-r_e, float(items[1])-r_e])
 
 alt_range_dict = {}
+incl_dict = {}
 for i in range(len(norad1)):
     if norad1[i] not in alt_range_dict:
         alt_range_dict[norad1[i]] = alt_range1[i]
@@ -78,6 +83,18 @@ for i in range(len(norad2)):
         alt_range_dict[norad2[i]] = alt_range2[i]
     else:
         continue
+
+for i in range(len(norad1)):
+    if norad1[i] not in incl_dict:
+        incl_dict[norad1[i]] = incl1[i]
+    else:
+        continue
+for i in range(len(norad2)):
+    if norad2[i] not in incl_dict:
+        incl_dict[norad2[i]] = incl2[i]
+    else:
+        continue
+
 
 cnode_pos_str = data_np[1:, 6]
 cnode_pos = np.zeros((len(cnode_pos_str), 3))
@@ -302,6 +319,8 @@ else:
 # now, let's find out what percentage of conjunctions involve starlink
 starlink_conj_name1 = np.char.find(name1[idx_y_col_sml], 'STARLINK') >= 0
 starlink_conj_name2 = np.char.find(name2[idx_y_col_sml], 'STARLINK') >= 0
+debris_conj_name1 = np.char.find(name1[idx_y_col_sml], 'DEB') >= 0
+debris_conj_name2 = np.char.find(name2[idx_y_col_sml], 'DEB') >= 0
 
 # what percentage of conjunctions involve at least one starlink?
 starlink_conj = np.logical_or(starlink_conj_name1, starlink_conj_name2)
@@ -310,6 +329,14 @@ print(np.sum(starlink_conj)/len(starlink_conj)*100, '% of conjunctions involve a
 # what percentage of conjunctions involve two starlinks?
 starlink_conj_both = np.logical_and(starlink_conj_name1, starlink_conj_name2)
 print(np.sum(starlink_conj_both)/len(starlink_conj)*100, '% of conjunctions involve two Starlink satellites')
+
+# what percentage of conjunctions involve at least one debris object?
+debris_conj = np.logical_or(debris_conj_name1, debris_conj_name2)
+print(np.sum(debris_conj)/len(debris_conj)*100, '% of conjunctions involve at least one debris object')
+
+# what percentage of conjunctions involve two debris objects?
+debris_conj_both = np.logical_and(debris_conj_name1, debris_conj_name2)
+print(np.sum(debris_conj_both)/len(debris_conj)*100, '% of conjunctions involve two debris objects')
 
 # get a list of the unique norad ids across norad1 and norad2
 norad = np.unique(np.concatenate((norad1[idx_y_col_sml], norad2[idx_y_col_sml])))
@@ -381,7 +408,75 @@ table = tabulate(table_data, headers=headers, tablefmt="pipe")
 # Print the title and the table
 print("**10 satellites with highest conjunction frequency**")
 print(table)
-    
+
+# if norad id is 90000 or greater, extract the satellite's altitude and inclination and make a heat map of conjunction frequency across altitude and inclination
+
+print("artificial objects")
+
+# Data containers
+altitudes = []
+inclinations = []
+conjunction_frequencies = []
+
+# Extract satellite data for NORAD IDs ≥ 90000
+for i in range(len(norad)):
+    if norad[i] >= 90000 and norad[i] in alt_range_dict and norad[i] in incl_dict:
+        avg_altitude = np.mean(alt_range_dict[norad[i]])  # Compute average altitude
+        
+        # Store extracted data
+        altitudes.append(avg_altitude)
+        inclinations.append(incl_dict[norad[i]])
+        conjunction_frequencies.append(sum_conj_freq[i])
+
+# Convert to NumPy arrays
+altitudes = np.array(altitudes)
+inclinations = np.array(inclinations)
+conjunction_frequencies = np.array(conjunction_frequencies)
+
+# Define grid resolution for heatmap
+alt_bins = np.linspace(min(altitudes), max(altitudes), 50)  # 50 altitude bins
+inc_bins = np.linspace(min(inclinations), max(inclinations), 50)  # 50 inclination bins
+
+# Compute 2D histogram (heatmap data)
+heatmap, xedges, yedges = np.histogram2d(altitudes, inclinations, bins=[alt_bins, inc_bins], weights=conjunction_frequencies)
+
+# Normalize heatmap values
+heatmap = np.nan_to_num(heatmap)  # Replace NaNs with 0
+
+# Create a custom colormap where 0 is a light blue and the rest follow 'plasma'
+cmap = plt.cm.plasma
+cmap_colors = cmap(np.linspace(0, 1, 256))
+cmap_colors[0] = np.array([173/255, 216/255, 230/255, 1])  # Light blue for 0 conjunctions
+custom_cmap = mcolors.ListedColormap(cmap_colors)
+
+### **Plot Heatmap**
+plt.figure(figsize=(9, 6))
+plt.pcolormesh(xedges, yedges, heatmap.T, cmap=custom_cmap, shading='auto')
+cbar = plt.colorbar(label='Conjunction Frequency')
+cbar.ax.set_yticklabels([f"{int(tick)}" for tick in cbar.get_ticks()])  # Format ticks as integers
+plt.xlabel('Altitude (km)', fontsize=12)
+plt.ylabel('Inclination (degrees)', fontsize=12)
+plt.title('Heatmap of Altitude vs Inclination', fontsize=14)
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
+
+### **Plot Scatter Plot**
+plt.figure(figsize=(9, 6))
+sc = plt.scatter(altitudes, inclinations, c=conjunction_frequencies, cmap='plasma', edgecolors='k', s=40, alpha=0.8)
+plt.colorbar(sc, label='Conjunction Frequency')
+plt.xlabel('Altitude (km)', fontsize=12)
+plt.ylabel('Inclination (degrees)', fontsize=12)
+plt.title('Scatter Plot of Altitude vs Inclination', fontsize=14)
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
+
+print("end artificial objects")
+
+
+
+
+
+
 
 # plot a histogram of the number of conjunctions each satellite is involved in
 plt.hist(conj_count, bins = 100)

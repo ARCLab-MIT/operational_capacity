@@ -33,10 +33,11 @@ def main():
     try:
         sat_params = pickle.load(open('data/sat_params.pkl', 'rb'))
         print('Loading satellite params from file!')
+        print(sat_params[0])
 
     except FileNotFoundError:
 
-        tle_file = open('3le_all_02262025.txt', 'r')
+        tle_file = open('3le_leo_092424_fake.txt', 'r')
         tle_lines = tle_file.readlines()
 
         print('No sat param file found. Loading TLE parameters...')
@@ -50,17 +51,6 @@ def main():
         for i in range(int(len(tle_lines)/3)):
             obj_name[i] = tle_lines[3*i][2:-1]
             obj_norad[i] = int(tle_lines[3*i+1][2:7])
-
-            '''
-            try:
-            # Try to convert the value to an integer
-                obj_norad[i] = int(tle_lines[3*i+1][2:7])
-            except ValueError:
-            # If it fails (i.e., it's a string like "T0000"), store it as a string
-                obj_norad[i] = tle_lines[3*i+1][2:7]
-            #obj_norad[i] = tle_lines[3*i+1][2:7]
-            '''
-            
             tle_l1[i] = tle_lines[3*i+1][:-1]
             tle_l2[i] = tle_lines[3*i+2][:-1]
         
@@ -78,7 +68,6 @@ def main():
             # compute orbit period using a and mu
             period = 2 * np.pi * np.sqrt(a ** 3/mu)
 
-
             sat_params[i] = {
                 'a': a,
                 'a_range': a_range,
@@ -95,7 +84,26 @@ def main():
 
             #print(i/len(tle_lines)*3)
 
+        '''
         # save sat_params to a file
+        print(type(sat_params))
+        print(len(sat_params))
+        print(sat_params[0])
+        filtered_sat_params = {}
+
+        filtered_sat_params = {}
+
+        for key, value in sat_params.items():  # Iterate through dictionary items
+            if value['a'] >= (2000 + earth_radius):  
+                print(value)
+            else:
+                filtered_sat_params[key] = value  # Keep valid satellites
+
+        sat_params = filtered_sat_params  # Replace with filtered dictionary
+        '''
+
+        print(f"sat params length {len(sat_params)}")
+
         with open('data/sat_params.pkl', 'wb') as f:
             pickle.dump(sat_params, f)
 
@@ -106,6 +114,7 @@ def main():
 
     # Check to see if data file already exists
     try:
+        print("help")
         with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'rb') as f:
             dist_a, dist_b, alt_a, alt_b, T_lcm = pickle.load(f)
             print('Loading conjunction parameters from file!')
@@ -126,17 +135,43 @@ def main():
         os.makedirs('data', exist_ok=True)
 
         print('Computing Conjunction Geometries!')
+
+        #batch_size = 1000
+        #temp_path = f'data/conj_params_with_debris_{n}_temp.pkl'
+
+       #with open(temp_path, 'wb') as f:
+        #    pickle.dump([], f)  # Initialize with an empty list
+
         # compute close approach distances for every object pair (don't repeat object pairs in reverse order)
         if parallel_compute == True:
             max_workers = os.cpu_count()
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(compute_conjunction_distance_v2, i, sat_params) for i in range(n)]
+
+                results = []
                 for idx, future in enumerate(futures):
+                    #results.append(future.result())
+                    """
+                    if (idx + 1) % batch_size == 0 or idx == n - 1:
+                        with open(temp_path, 'ab') as f:
+                            pickle.dump(results, f)
+                        results = []  # Clear memory
+                        print(f"Saved batch {idx + 1}/{n} to disk")
+                    """
                     dist_a[idx, :], dist_b[idx, :], alt_a[idx, :], alt_b[idx, :], T_lcm[idx, :] = future.result()
                     print(idx / n)
         else:
+            results = []
             for i in range(n):
-                dist_a[i,:], dist_b[i,:], alt_a[i,:], alt_b[i,:], T_lcm[i,:] = compute_conjunction_distance_v2(i, sat_params)
+                #dist_a[i,:], dist_b[i,:], alt_a[i,:], alt_b[i,:], T_lcm[i,:] = compute_conjunction_distance_v2(i, sat_params)
+                results.append(compute_conjunction_distance_v2(i, sat_params))
+
+                # Write results every batch_size iterations
+                if (i + 1) % batch_size == 0 or i == n - 1:
+                    with open(temp_path, 'ab') as f:
+                        pickle.dump(results, f)
+                    results = []  # Clear memory
+                    print(f"Saved batch {i + 1}/{n} to disk")
                 
                 # dist_a_close = dist_a[i,:][dist_a[i,:]<1]
                 # dist_b_close = dist_b[i,:][dist_b[i,:]<1]
@@ -265,6 +300,8 @@ def main():
         name2, norad_id2 = sat_params[j]['name'], sat_params[j]['norad']
         a_range1 = sat_params[i]['a_range']
         a_range2 = sat_params[j]['a_range']
+        incl1 = sat_params[i]['incl'] * 180/np.pi
+        incl2 = sat_params[j]['incl'] * 180/np.pi
 
         # Calculate expected time until collision
         # time_to_collision_a, intersection_point_a, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
@@ -285,7 +322,7 @@ def main():
         T_lcm_days = T_lcm[i,j]/86400
 
         if collision == True: 
-            saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
+            saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days, incl1, incl2])
         
     # repeat for collision point b
     a_or_b = 1
@@ -294,6 +331,8 @@ def main():
         name2, norad_id2 = sat_params[j]['name'], sat_params[j]['norad']
         a_range1 = sat_params[i]['a_range']
         a_range2 = sat_params[j]['a_range']
+        incl1 = sat_params[i]['incl'] * 180/np.pi
+        incl2 = sat_params[j]['incl'] * 180/np.pi
 
         # Calculate expected time until collision
         # time_to_collision_a, intersection_point_a, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
@@ -314,7 +353,7 @@ def main():
         T_lcm_days = T_lcm[i,j]/86400
         
         if collision == True: 
-            saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
+            saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days, incl1, incl2])
 
 
         # writer.writerow([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
@@ -372,7 +411,7 @@ def main():
     # write saved_vars to a csv file
     with open(output_file, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Satellite 1","NORAD ID 1", "Altitude Range [km]", "Satellite 2", "NORAD ID 2", "Altitude Range [km]", "Conjunction Node Position [eci, km]", "Collision Point A or B", "Conjunction Point Altitude [km]", "Will they Collide?", "Time Until Collision [days]", "Synodic Period [days]", "Collision Frequency [1/days]"])
+        writer.writerow(["Satellite 1","NORAD ID 1", "Altitude Range [km]", "Satellite 2", "NORAD ID 2", "Altitude Range [km]", "Conjunction Node Position [eci, km]", "Collision Point A or B", "Conjunction Point Altitude [km]", "Will they Collide?", "Time Until Collision [days]", "Synodic Period [days]", "Collision Frequency [1/days]", "Inclination of Sat 1", "Inclination of Sat 2"])
         writer.writerows(saved_vars)
 
     exit()
