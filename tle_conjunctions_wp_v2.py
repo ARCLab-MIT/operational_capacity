@@ -30,14 +30,14 @@ def main():
 
     # load txt file with TLEs and read them
     # check to see if sat_params.pkl exists, if not, create it
+    year = 2025
     try:
-        sat_params = pickle.load(open('data/sat_params.pkl', 'rb'))
+        sat_params = pickle.load(open('data/sat_params_' + str(year) + '.pkl', 'rb'))
         print('Loading satellite params from file!')
         print(sat_params[0])
 
     except FileNotFoundError:
-
-        tle_file = open('3le_leo_092424_fake.txt', 'r')
+        tle_file = open('data/Historical_TLE_Data/'+str(year)+'_no_repeats.txt', 'r')
         tle_lines = tle_file.readlines()
 
         print('No sat param file found. Loading TLE parameters...')
@@ -48,6 +48,7 @@ def main():
         a_range = np.zeros(int(len(tle_lines)/3), dtype=object)
         obj_norad = np.zeros(int(len(tle_lines)/3), dtype=object)
         sat_params = {}
+        j = 0
         for i in range(int(len(tle_lines)/3)):
             obj_name[i] = tle_lines[3*i][2:-1]
             obj_norad[i] = int(tle_lines[3*i+1][2:7])
@@ -68,19 +69,21 @@ def main():
             # compute orbit period using a and mu
             period = 2 * np.pi * np.sqrt(a ** 3/mu)
 
-            sat_params[i] = {
-                'a': a,
-                'a_range': a_range,
-                'e': e,
-                'incl': incl,
-                'raan': raan,
-                'arg_per': arg_per,
-                'meanan': meanan,
-                'epoch': epoch,
-                'period': period,
-                'name': obj_name[i],
-                'norad': obj_norad[i]
-            }
+            if a_range[0] < 2000 + earth_radius and a_range[1] > 300 + earth_radius:
+                sat_params[j] = {
+                    'a': a,
+                    'a_range': a_range,
+                    'e': e,
+                    'incl': incl,
+                    'raan': raan,
+                    'arg_per': arg_per,
+                    'meanan': meanan,
+                    'epoch': epoch,
+                    'period': period,
+                    'name': obj_name[i],
+                    'norad': obj_norad[i]
+                }
+                j += 1
 
             #print(i/len(tle_lines)*3)
 
@@ -102,9 +105,10 @@ def main():
         sat_params = filtered_sat_params  # Replace with filtered dictionary
         '''
 
+        print(len(tle_lines)/3)
         print(f"sat params length {len(sat_params)}")
 
-        with open('data/sat_params.pkl', 'wb') as f:
+        with open('data/sat_params_' + str(year) + '.pkl', 'wb') as f:
             pickle.dump(sat_params, f)
 
 
@@ -115,7 +119,8 @@ def main():
     # Check to see if data file already exists
     try:
         print("help")
-        with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'rb') as f:
+        #with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'rb') as f:
+        with open('data/conj_params_historical_' + str(year) + '.pkl', 'rb') as f:
             dist_a, dist_b, alt_a, alt_b, T_lcm = pickle.load(f)
             print('Loading conjunction parameters from file!')
 
@@ -198,9 +203,9 @@ def main():
 
         # Save the results to a file
         try:
-            with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'wb') as f:
+            with open('data/conj_params_historical_' + str(year) + '.pkl', 'wb') as f:
                 pickle.dump((dist_a, dist_b, alt_a, alt_b, T_lcm), f)
-                print(f"File 'data/conj_params_{n}.pkl' created!")
+                print(f"File 'data/conj_params_historical_{year}.pkl' created!")
         except OSError as e:
             if e.errno == 28:
                 print("Error: No space left on device. Please free up some space and try again.")
@@ -292,7 +297,7 @@ def main():
     saved_vars = []
 
     # Define output file
-    output_file = "data/collision_results_mh_test.csv"
+    output_file = "data/collision_results_historical_" + str(year) + ".csv"
 
     # Determine whether conjunctions occur
     for i, j in tqdm(below_threshold_pairs, desc="Processing Pairs", unit="pair"):
