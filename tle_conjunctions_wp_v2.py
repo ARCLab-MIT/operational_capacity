@@ -14,11 +14,11 @@ from scipy.signal import argrelextrema
 import csv
 import pandas as pd
 from fractions import Fraction
+from datetime import datetime, timezone
 # from memory_profiler import profile
 
 earth_radius = 6378.137  # km
 mu = 398600.435507  # km^3/s^2
-
 
 def main():
     # Example TLEs
@@ -30,438 +30,488 @@ def main():
 
     # load txt file with TLEs and read them
     # check to see if sat_params.pkl exists, if not, create it
-    year = 2025
-    try:
-        sat_params = pickle.load(open('data/sat_params_' + str(year) + '.pkl', 'rb'))
-        print('Loading satellite params from file!')
-        print(sat_params[0])
+    years = np.arange(2025, 2026, 1)
+    months = np.arange(1, 2, 1)  # Use specific months or range: np.arange(1, 13, 1)
+    for year in years: 
+        for month in months:
+            print(f"Month: {month}, Year: {year}")
+            if year == 2025 and month > 2:
+                break
+            print(str(month) + '/' + str(year))
+            try:
+                sat_params = []
+                sat_params = pickle.load(open('data/sat_params_annual_prop/sat_params_' + str(year) + '.pkl', 'rb'))
+                #sat_params = pickle.load(open(f"data/sat_params_monthly_prop/sat_params_{month:02d}{year}.pkl", "rb"))
+                print('Loading satellite params from file!')
 
-    except FileNotFoundError:
-        tle_file = open('data/Historical_TLE_Data/'+str(year)+'_no_repeats.txt', 'r')
-        tle_lines = tle_file.readlines()
+            except FileNotFoundError:
+                tle_file = open('data/batch_tles_annual/' + str(year)+'.txt', 'r')
+                #tle_file = open(f"data/batch_tles_monthly/{month:02d}{year}.txt", "r")
+                tle_lines = tle_file.readlines()
 
-        print('No sat param file found. Loading TLE parameters...')
+                print('No sat param file found. Loading TLE parameters...')
 
-        tle_l1 = np.zeros(int(len(tle_lines)/3), dtype=object)
-        tle_l2 = np.zeros(int(len(tle_lines)/3), dtype=object)
-        obj_name = np.zeros(int(len(tle_lines)/3), dtype=object)
-        a_range = np.zeros(int(len(tle_lines)/3), dtype=object)
-        obj_norad = np.zeros(int(len(tle_lines)/3), dtype=object)
-        sat_params = {}
-        j = 0
-        for i in range(int(len(tle_lines)/3)):
-            obj_name[i] = tle_lines[3*i][2:-1]
-            obj_norad[i] = int(tle_lines[3*i+1][2:7])
-            tle_l1[i] = tle_lines[3*i+1][:-1]
-            tle_l2[i] = tle_lines[3*i+2][:-1]
-        
-
-            # get all the satellite orbit parameters from the TLEs. Store in a dictionary with the satellite norad id as the key
-            satellite = get_satellite(tle_l1[i], tle_l2[i])
-            a = satellite.model.a*earth_radius  # Semi-major axis in km
-            e = satellite.model.ecco  # Eccentricity
-            a_range = [a*(1-e), a*(1+e)]
-            incl = satellite.model.inclo  # Inclination 
-            raan = satellite.model.nodeo  # Right ascension of ascending node
-            arg_per = satellite.model.argpo  # Argument of perigee 
-            meanan = satellite.model.mo  # Mean anomaly at epoch 
-            epoch = satellite.epoch.utc_datetime()  # Epoch time
-            # compute orbit period using a and mu
-            period = 2 * np.pi * np.sqrt(a ** 3/mu)
-
-            if a_range[0] < 2000 + earth_radius and a_range[1] > 300 + earth_radius:
-                sat_params[j] = {
-                    'a': a,
-                    'a_range': a_range,
-                    'e': e,
-                    'incl': incl,
-                    'raan': raan,
-                    'arg_per': arg_per,
-                    'meanan': meanan,
-                    'epoch': epoch,
-                    'period': period,
-                    'name': obj_name[i],
-                    'norad': obj_norad[i]
-                }
-                j += 1
-
-            #print(i/len(tle_lines)*3)
-
-        '''
-        # save sat_params to a file
-        print(type(sat_params))
-        print(len(sat_params))
-        print(sat_params[0])
-        filtered_sat_params = {}
-
-        filtered_sat_params = {}
-
-        for key, value in sat_params.items():  # Iterate through dictionary items
-            if value['a'] >= (2000 + earth_radius):  
-                print(value)
-            else:
-                filtered_sat_params[key] = value  # Keep valid satellites
-
-        sat_params = filtered_sat_params  # Replace with filtered dictionary
-        '''
-
-        print(len(tle_lines)/3)
-        print(f"sat params length {len(sat_params)}")
-
-        with open('data/sat_params_' + str(year) + '.pkl', 'wb') as f:
-            pickle.dump(sat_params, f)
-
-
-    # Initialize variables
-    n = len(sat_params)
-    parallel_compute = True
-
-    # Check to see if data file already exists
-    try:
-        print("help")
-        #with open('data/conj_params_with_debris_' + str(n) + '.pkl', 'rb') as f:
-        with open('data/conj_params_historical_' + str(year) + '.pkl', 'rb') as f:
-            dist_a, dist_b, alt_a, alt_b, T_lcm = pickle.load(f)
-            print('Loading conjunction parameters from file!')
-
-    except FileNotFoundError:
-
-        # Initialize variables
-        dist_a = np.full((n, len(sat_params)), np.nan)
-        dist_b = np.full((n, len(sat_params)), np.nan)
-        alt_a = np.full((n, len(sat_params)), np.nan)
-        alt_b = np.full((n, len(sat_params)), np.nan)
-        # pos_a = np.full((n, len(sat_params), 3), np.nan)
-        # pos_b = np.full((n, len(sat_params), 3), np.nan)
-        T_lcm = np.full((n, len(sat_params)), np.nan)
-        t1 = time.time()
-
-        # Ensure the directory exists
-        os.makedirs('data', exist_ok=True)
-
-        print('Computing Conjunction Geometries!')
-
-        #batch_size = 1000
-        #temp_path = f'data/conj_params_with_debris_{n}_temp.pkl'
-
-       #with open(temp_path, 'wb') as f:
-        #    pickle.dump([], f)  # Initialize with an empty list
-
-        # compute close approach distances for every object pair (don't repeat object pairs in reverse order)
-        if parallel_compute == True:
-            max_workers = os.cpu_count()
-            with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                futures = [executor.submit(compute_conjunction_distance_v2, i, sat_params) for i in range(n)]
-
-                results = []
-                for idx, future in enumerate(futures):
-                    #results.append(future.result())
-                    """
-                    if (idx + 1) % batch_size == 0 or idx == n - 1:
-                        with open(temp_path, 'ab') as f:
-                            pickle.dump(results, f)
-                        results = []  # Clear memory
-                        print(f"Saved batch {idx + 1}/{n} to disk")
-                    """
-                    dist_a[idx, :], dist_b[idx, :], alt_a[idx, :], alt_b[idx, :], T_lcm[idx, :] = future.result()
-                    print(idx / n)
-        else:
-            results = []
-            for i in range(n):
-                #dist_a[i,:], dist_b[i,:], alt_a[i,:], alt_b[i,:], T_lcm[i,:] = compute_conjunction_distance_v2(i, sat_params)
-                results.append(compute_conjunction_distance_v2(i, sat_params))
-
-                # Write results every batch_size iterations
-                if (i + 1) % batch_size == 0 or i == n - 1:
-                    with open(temp_path, 'ab') as f:
-                        pickle.dump(results, f)
-                    results = []  # Clear memory
-                    print(f"Saved batch {i + 1}/{n} to disk")
+                tle_l1 = np.zeros(int(len(tle_lines)/3), dtype=object)
+                tle_l2 = np.zeros(int(len(tle_lines)/3), dtype=object)
+                obj_name = np.zeros(int(len(tle_lines)/3), dtype=object)
+                a_range = np.zeros(int(len(tle_lines)/3), dtype=object)
+                obj_norad = np.zeros(int(len(tle_lines)/3), dtype=object)
+                sat_params = {}
+                j = 0
+                for i in range(int(len(tle_lines)/3)):
+                    obj_name[i] = tle_lines[3*i][2:-1]
+                    obj_norad[i] = int(tle_lines[3*i+1][2:7])
+                    tle_l1[i] = tle_lines[3*i+1][:-1]
+                    tle_l2[i] = tle_lines[3*i+2][:-1]
                 
-                # dist_a_close = dist_a[i,:][dist_a[i,:]<1]
-                # dist_b_close = dist_b[i,:][dist_b[i,:]<1]
-                # alt_a_close = alt_a[i,:][dist_a[i,:]<1]
-                # alt_b_close = alt_b[i,:][dist_b[i,:]<1]
 
-                # # plot alt_a and alt_b with horizontal lines marking the a_range
-                # plt.figure()
-                # plt.plot(alt_a_close-6378.15, 'b.')
-                # plt.plot(alt_b_close-6378.15, 'g.')
-                # plt.axhline(sat_params[i]['a_range'][0]-6378.15)
-                # plt.axhline(sat_params[i]['a_range'][1]-6378.15)
-                # plt.show()
+                    # get all the satellite orbit parameters from the TLEs. Store in a dictionary with the satellite norad id as the key
+                    satellite = get_satellite(tle_l1[i], tle_l2[i])
+                    a = satellite.model.a * earth_radius  # Semi-major axis in km
+                    e = satellite.model.ecco  # Eccentricity
+                    a_range = [a*(1-e), a*(1+e)]
+                    incl = satellite.model.inclo  # Inclination in radians
+                    raan = satellite.model.nodeo  # Right ascension of ascending node in radians
+                    arg_per = satellite.model.argpo  # Argument of perigee in radians
+                    meanan = satellite.model.mo  # Mean anomaly at epoch in radians
+                    epoch = satellite.epoch.utc_datetime()  # Epoch time
+                    # compute orbit period using a and mu
+                    period = 2 * np.pi * np.sqrt(a ** 3/mu)
 
-                # plt.figure()
-                # plt.plot(T_lcm[i,:][dist_a[i,:]<1]/(24*3600), '.')
-                # plt.ylabel('T_lcm (days)')
-                # plt.show()
-                
-                print(i/n)
+                    if a_range[0] < 2000 + earth_radius and a_range[1] > 300 + earth_radius:
+                        if obj_norad[i] < 90000:
+                            epoch_end = datetime(year, month, 14, 0, 0, 0, tzinfo=timezone.utc)
+                            new_elements = propagate_keplerian(a, e, incl, raan, arg_per, meanan, epoch, epoch_end)
+                            a_prop, e_prop, incl_prop, raan_prop, arg_per_prop, meanan_prop = new_elements
+                            a_range_prop = [a_prop * (1-e_prop), a_prop * (1+e_prop)]
+                            period_prop = 2 * np.pi * np.sqrt(a_prop ** 3/mu)
+                            sat_params[j] = {
+                                'a': a_prop,
+                                'a_range': a_range_prop,
+                                'e': e_prop,
+                                'incl': incl_prop,
+                                'raan': raan_prop,
+                                'arg_per': arg_per_prop,
+                                'meanan': meanan_prop,
+                                'epoch': epoch_end,
+                                'period': period_prop,
+                                'name': obj_name[i],
+                                'norad': obj_norad[i]
+                            }
+                        else:
+                            sat_params[j] = {
+                                'a': a,
+                                'a_range': a_range,
+                                'e': e,
+                                'incl': incl,
+                                'raan': raan,
+                                'arg_per': arg_per,
+                                'meanan': meanan,
+                                'epoch': epoch,
+                                'period': period,
+                                'name': obj_name[i],
+                                'norad': obj_norad[i]
+                            }
+                        j += 1
 
-        t2 = time.time()
-        print(f"Time taken: {t2 - t1} seconds")
+                    #print(i/len(tle_lines)*3)
 
-        # Save the results to a file
-        try:
-            with open('data/conj_params_historical_' + str(year) + '.pkl', 'wb') as f:
-                pickle.dump((dist_a, dist_b, alt_a, alt_b, T_lcm), f)
-                print(f"File 'data/conj_params_historical_{year}.pkl' created!")
-        except OSError as e:
-            if e.errno == 28:
-                print("Error: No space left on device. Please free up some space and try again.")
-            else:
-                print(f"An error occurred while saving the pickle file: {e}")
+                '''
+                # save sat_params to a file
+                print(type(sat_params))
+                print(len(sat_params))
+                print(sat_params[0])
+                filtered_sat_params = {}
 
+                filtered_sat_params = {}
 
-    # plot T_lcm as imshow
-    # plt.figure()
-    # plt.imshow(T_lcm/(24*3600), cmap='viridis', aspect='auto')
-    # plt.colorbar()
-    # plt.xlabel('Satellite Index')
-    # plt.ylabel('Satellite Index')
-    # plt.title('Synodic Period')
-    # plt.show()
+                for key, value in sat_params.items():  # Iterate through dictionary items
+                    if value['a'] >= (2000 + earth_radius):  
+                        print(value)
+                    else:
+                        filtered_sat_params[key] = value  # Keep valid satellites
 
-    # plot a histogram of the T_lcm values that are not nan
-    # plt.figure()
-    # plt.hist(T_lcm[~np.isnan(T_lcm)]/(24*3600), bins=1000)
-    # # log scale
-    # plt.yscale('log')
-    # plt.xlabel('LCM Period (days)')
-    # plt.ylabel('Frequency')
-    # plt.title('Histogram of LCM Periods')
-    # plt.show()
+                sat_params = filtered_sat_params  # Replace with filtered dictionary
+                '''
 
-    # s_on_s = 0
-    # total = 0
-    # for i in range(len(sat_params)):
-    #     for j in range(len(sat_params)):
-    #         if T_lcm[i,j] < 0.2*(3600*24):
-    #             # check to see if sat_params[i]['name'] and sat_params[j]['name'] include 'STARLINK'
-    #             if 'STARLINK' in sat_params[i]['name'] and 'STARLINK' in sat_params[j]['name']:
-    #                 s_on_s += 1
-    #                 total += 1
-    #             else: 
-    #                 total += 1
+                print(len(tle_lines)/3)
+                print(f"sat params length {len(sat_params)}")
 
-    #     # print(i)
-
-    # print(f"Frac STARLINK on STARLINK conjunctions: {s_on_s/total}")
-                
-    # quit()
-
-    # repeat the plot above, but make it a heatmap with number of points within each grid cell
-    # make a 2D histogram of alt_a vs dist_a and alt_b vs dist_b
-        # Filter out NaN values
-    # valid_indices_a = ~np.isnan(alt_a.flatten()) & ~np.isnan(dist_a.flatten())
-    # valid_indices_b = ~np.isnan(alt_b.flatten()) & ~np.isnan(dist_b.flatten())
-
-    # alt_a_valid = alt_a.flatten()[valid_indices_a] - earth_radius
-    # dist_a_valid = dist_a.flatten()[valid_indices_a]
-    # alt_b_valid = alt_b.flatten()[valid_indices_b] - earth_radius
-    # dist_b_valid = dist_b.flatten()[valid_indices_b]
-    # T_lcm_valid = T_lcm.flatten()[valid_indices_a or valid_indices_b] 
-
-    # make a combined dist and alt array
-    # alt_valid = np.concatenate((alt_a_valid, alt_b_valid))
-    # dist_valid = np.concatenate((dist_a_valid, dist_b_valid))
-    
-    ###############################################################################
-
-    # Define the threshold distance for conjunction
-    threshold = 0.1  # kilometers of miss distance
-    t_tol = 1 # seconds of miss distance
-    LEO_cutoff = 2000 + earth_radius # km
-
-    # Find pairs of satellites with distances below the threshold
-    print("Number of conjunctions before filtering: ", str(len(sat_params)**2))
-    below_threshold_indices = np.where((dist_a < threshold) & (0.2*24*3600 < T_lcm) & (alt_a < LEO_cutoff))#(T_lcm < 90*24*3600)& 
-    below_threshold_indices_b = np.where((dist_b < threshold) &  (0.2*24*3600 < T_lcm) & (alt_b < LEO_cutoff)) #(T_lcm < 90*24*3600) &
-    print("Number of conjunctions after filtering: ", str(len(below_threshold_indices[0]) + len(below_threshold_indices_b[0])))
-
-    # Filter unique pairs (i < j)
-    below_threshold_pairs = [(i, j) for i, j in zip(*below_threshold_indices) if i < j]
-    print(f"Number of collision pairs at collision point a {len(below_threshold_pairs)}")
-    below_threshold_pairs_b = [(i, j) for i, j in zip(*below_threshold_indices_b) if i < j]
-    print(f"Number of collision pairs at collision point b {len(below_threshold_pairs_b)}")
-         
-    # Process each pair to calculate time until collision
-    collision_count = 0
-    none_count = 0
-    intersection_points = []
-    collision_times = []
-    altitudes = []
-    a_or_b = 0
-    out_of_range_1 = []
-    out_of_range_2 = []
-    saved_vars = []
-
-    # Define output file
-    output_file = "data/collision_results_historical_" + str(year) + ".csv"
-
-    # Determine whether conjunctions occur
-    for i, j in tqdm(below_threshold_pairs, desc="Processing Pairs", unit="pair"):
-        name1, norad_id1 = sat_params[i]['name'], sat_params[i]['norad']
-        name2, norad_id2 = sat_params[j]['name'], sat_params[j]['norad']
-        a_range1 = sat_params[i]['a_range']
-        a_range2 = sat_params[j]['a_range']
-        incl1 = sat_params[i]['incl'] * 180/np.pi
-        incl2 = sat_params[j]['incl'] * 180/np.pi
-
-        # Calculate expected time until collision
-        # time_to_collision_a, intersection_point_a, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
-        time_to_collision_a, intersection_point_a, collision = time_until_collision_v2(sat_params[i], sat_params[j], T_lcm[i,j], a_or_b, t_tol)
-
-        if time_to_collision_a is not None:
-            time_to_collision_days = time_to_collision_a/86400
-            collision_times.append(time_to_collision_a)
-            alt = np.linalg.norm(intersection_point_a) - earth_radius
-            intersection_points.append(intersection_point_a)
-            altitudes.append(alt)
-            collision_count = collision_count + 1
-        else:
-            time_to_collision_days = None
-            alt = None
-            none_count = none_count + 1
-
-        T_lcm_days = T_lcm[i,j]/86400
-
-        if collision == True: 
-            saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days, incl1, incl2])
-        
-    # repeat for collision point b
-    a_or_b = 1
-    for i, j in tqdm(below_threshold_pairs_b, desc="Processing Pairs", unit="pair"):
-        name1, norad_id1 = sat_params[i]['name'], sat_params[i]['norad']
-        name2, norad_id2 = sat_params[j]['name'], sat_params[j]['norad']
-        a_range1 = sat_params[i]['a_range']
-        a_range2 = sat_params[j]['a_range']
-        incl1 = sat_params[i]['incl'] * 180/np.pi
-        incl2 = sat_params[j]['incl'] * 180/np.pi
-
-        # Calculate expected time until collision
-        # time_to_collision_a, intersection_point_a, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
-        time_to_collision_b, intersection_point_b, collision = time_until_collision_v2(sat_params[i], sat_params[j], T_lcm[i,j], a_or_b, t_tol)
-
-        if time_to_collision_b is not None:
-            time_to_collision_days = time_to_collision_b/86400
-            collision_times.append(time_to_collision_b)
-            alt = np.linalg.norm(intersection_point_b) - earth_radius
-            intersection_points.append(intersection_point_b)
-            altitudes.append(alt)
-            collision_count = collision_count + 1
-        else:
-            time_to_collision_days = None
-            alt = None
-            none_count = none_count + 1
-
-        T_lcm_days = T_lcm[i,j]/86400
-        
-        if collision == True: 
-            saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days, incl1, incl2])
+                with open('data/sat_params_annual_prop/sat_params_' + str(year) + '.pkl', 'wb') as f:
+                #with open(f"data/sat_params_monthly_prop/sat_params_{month:02d}{year}.pkl", "wb") as f:
+                    pickle.dump(sat_params, f)
 
 
-        # writer.writerow([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
-        
-        # for i, j in tqdm(below_threshold_pairs_b, desc="Processing Pairs", unit="pair"):
-        #     tle1_line1, tle1_line2 = tle_l1[i], tle_l2[i]
-        #     tle2_line1, tle2_line2 = tle_l1[j], tle_l2[j]
-        #     name1 = obj_name[i]
-        #     name2 = obj_name[j]
-        #     norad_id1 = tle1_line2.split()[1]
-        #     norad_id2 = tle2_line2.split()[1]
-        #     a_or_b = 1
+            # Initialize variables
+            n = len(sat_params)
+            parallel_compute = True
 
-        #     satellite1 = get_satellite(tle1_line1, tle1_line2)
-        #     satellite2 = get_satellite(tle2_line1, tle2_line2)
-        #     a1 = satellite1.model.a * earth_radius
-        #     a2 = satellite2.model.a * earth_radius
-        #     ecc1 = satellite1.model.ecco
-        #     ecc2 = satellite2.model.ecco
+            # Check to see if data file already exists
+            try:
+                with open('data/conj_params_annual_prop/conj_params_' + str(year) + '.pkl', 'rb') as f:
+                #with open(f"data/conj_params_monthly_prop/conj_params_{month:02d}{year}.pkl", "rb") as f:
+                    dist_a, dist_b, alt_a, alt_b, T_lcm = pickle.load(f)
+                    print('Loading conjunction parameters from file!')
 
-        #     rp1 = a1 * (1-ecc1) - earth_radius
-        #     ra1 = a1 * (1+ecc1) - earth_radius
-        #     rp2 = a2 * (1-ecc2) - earth_radius
-        #     ra2 = a2 * (1+ecc2) - earth_radius
-        #     a_range1 = [rp1, ra1]
-        #     a_range2 = [rp2, ra2]
+            except FileNotFoundError:
 
-        #         # Calculate expected time until collision
-        #     time_to_collision_b, intersection_point_b, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
+                # Initialize variables
+                dist_a = np.full((n, len(sat_params)), np.nan)
+                dist_b = np.full((n, len(sat_params)), np.nan)
+                alt_a = np.full((n, len(sat_params)), np.nan)
+                alt_b = np.full((n, len(sat_params)), np.nan)
+                # pos_a = np.full((n, len(sat_params), 3), np.nan)
+                # pos_b = np.full((n, len(sat_params), 3), np.nan)
+                T_lcm = np.full((n, len(sat_params)), np.nan)
+                t1 = time.time()
+
+                # Ensure the directory exists
+                os.makedirs('data', exist_ok=True)
+
+                print('Computing Conjunction Geometries!')
+
+                #batch_size = 1000
+                #temp_path = f'data/conj_params_with_debris_{n}_temp.pkl'
+
+            #with open(temp_path, 'wb') as f:
+                #    pickle.dump([], f)  # Initialize with an empty list
+
+                # compute close approach distances for every object pair (don't repeat object pairs in reverse order)
+                if parallel_compute == True:
+                    max_workers = os.cpu_count()
+                    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                        futures = [executor.submit(compute_conjunction_distance_v2, i, sat_params) for i in range(n)]
+
+                        results = []
+                        for idx, future in enumerate(futures):
+                            #results.append(future.result())
+                            """
+                            if (idx + 1) % batch_size == 0 or idx == n - 1:
+                                with open(temp_path, 'ab') as f:
+                                    pickle.dump(results, f)
+                                results = []  # Clear memory
+                                print(f"Saved batch {idx + 1}/{n} to disk")
+                            """
+                            dist_a[idx, :], dist_b[idx, :], alt_a[idx, :], alt_b[idx, :], T_lcm[idx, :] = future.result()
+                            print(idx / n)
+                else:
+                    results = []
+                    for i in range(n):
+                        #dist_a[i,:], dist_b[i,:], alt_a[i,:], alt_b[i,:], T_lcm[i,:] = compute_conjunction_distance_v2(i, sat_params)
+                        results.append(compute_conjunction_distance_v2(i, sat_params))
+
+                        # Write results every batch_size iterations
+                        if (i + 1) % batch_size == 0 or i == n - 1:
+                            with open(temp_path, 'ab') as f:
+                                pickle.dump(results, f)
+                            results = []  # Clear memory
+                            print(f"Saved batch {i + 1}/{n} to disk")
+                        
+                        # dist_a_close = dist_a[i,:][dist_a[i,:]<1]
+                        # dist_b_close = dist_b[i,:][dist_b[i,:]<1]
+                        # alt_a_close = alt_a[i,:][dist_a[i,:]<1]
+                        # alt_b_close = alt_b[i,:][dist_b[i,:]<1]
+
+                        # # plot alt_a and alt_b with horizontal lines marking the a_range
+                        # plt.figure()
+                        # plt.plot(alt_a_close-6378.15, 'b.')
+                        # plt.plot(alt_b_close-6378.15, 'g.')
+                        # plt.axhline(sat_params[i]['a_range'][0]-6378.15)
+                        # plt.axhline(sat_params[i]['a_range'][1]-6378.15)
+                        # plt.show()
+
+                        # plt.figure()
+                        # plt.plot(T_lcm[i,:][dist_a[i,:]<1]/(24*3600), '.')
+                        # plt.ylabel('T_lcm (days)')
+                        # plt.show()
+                        
+                        print(i/n)
+
+                t2 = time.time()
+                print(f"Time taken: {t2 - t1} seconds")
+
+                # Save the results to a file
+                try:
+                    with open('data/conj_params_annual_prop/conj_params_' + str(year) + '.pkl', 'wb') as f:
+                    #with open(f"data/conj_params_monthly_prop/conj_params_{month:02d}{year}.pkl", "wb") as f:
+                        pickle.dump((dist_a, dist_b, alt_a, alt_b, T_lcm), f)
+                        print(f"File 'data/conj_params_{year}.pkl' created!")
+                except OSError as e:
+                    if e.errno == 28:
+                        print("Error: No space left on device. Please free up some space and try again.")
+                    else:
+                        print(f"An error occurred while saving the pickle file: {e}")
+
+
+            # plot T_lcm as imshow
+            # plt.figure()
+            # plt.imshow(T_lcm/(24*3600), cmap='viridis', aspect='auto')
+            # plt.colorbar()
+            # plt.xlabel('Satellite Index')
+            # plt.ylabel('Satellite Index')
+            # plt.title('Synodic Period')
+            # plt.show()
+
+            # plot a histogram of the T_lcm values that are not nan
+            # plt.figure()
+            # plt.hist(T_lcm[~np.isnan(T_lcm)]/(24*3600), bins=1000)
+            # # log scale
+            # plt.yscale('log')
+            # plt.xlabel('LCM Period (days)')
+            # plt.ylabel('Frequency')
+            # plt.title('Histogram of LCM Periods')
+            # plt.show()
+
+            # s_on_s = 0
+            # total = 0
+            # for i in range(len(sat_params)):
+            #     for j in range(len(sat_params)):
+            #         if T_lcm[i,j] < 0.2*(3600*24):
+            #             # check to see if sat_params[i]['name'] and sat_params[j]['name'] include 'STARLINK'
+            #             if 'STARLINK' in sat_params[i]['name'] and 'STARLINK' in sat_params[j]['name']:
+            #                 s_on_s += 1
+            #                 total += 1
+            #             else: 
+            #                 total += 1
+
+            #     # print(i)
+
+            # print(f"Frac STARLINK on STARLINK conjunctions: {s_on_s/total}")
+                        
+            # quit()
+
+            # repeat the plot above, but make it a heatmap with number of points within each grid cell
+            # make a 2D histogram of alt_a vs dist_a and alt_b vs dist_b
+                # Filter out NaN values
+            # valid_indices_a = ~np.isnan(alt_a.flatten()) & ~np.isnan(dist_a.flatten())
+            # valid_indices_b = ~np.isnan(alt_b.flatten()) & ~np.isnan(dist_b.flatten())
+
+            # alt_a_valid = alt_a.flatten()[valid_indices_a] - earth_radius
+            # dist_a_valid = dist_a.flatten()[valid_indices_a]
+            # alt_b_valid = alt_b.flatten()[valid_indices_b] - earth_radius
+            # dist_b_valid = dist_b.flatten()[valid_indices_b]
+            # T_lcm_valid = T_lcm.flatten()[valid_indices_a or valid_indices_b] 
+
+            # make a combined dist and alt array
+            # alt_valid = np.concatenate((alt_a_valid, alt_b_valid))
+            # dist_valid = np.concatenate((dist_a_valid, dist_b_valid))
             
-        #     alt = np.linalg.norm(intersection_point_b) - earth_radius
+            ###############################################################################
 
-        #     if time_to_collision_b is not None:
-        #         time_to_collision_days = time_to_collision_b/86400
-        #     else:
-        #         time_to_collision_days = time_to_collision_b
-        #     T_lcm_days = T_lcm/86400
+            # Define the threshold distance for conjunction
+            threshold = 0.1  # kilometers of miss distance
+            t_tol = 1 # seconds of miss distance
+            LEO_cutoff = 2000 + earth_radius # km
 
-        #     if time_to_collision_b is not None:
-        #         collision_times.append(time_to_collision_b)
-        #         intersection_points.append(intersection_point_b)
-        #         altitudes.append(alt)
+            # Find pairs of satellites with distances below the threshold
+            print("Number of conjunctions before filtering: ", str(len(sat_params)**2))
+            below_threshold_indices = np.where((dist_a < threshold) & (0.2*24*3600 < T_lcm) & (alt_a < LEO_cutoff))#(T_lcm < 90*24*3600)& 
+            below_threshold_indices_b = np.where((dist_b < threshold) &  (0.2*24*3600 < T_lcm) & (alt_b < LEO_cutoff)) #(T_lcm < 90*24*3600) &
+            print("Number of conjunctions after filtering: ", str(len(below_threshold_indices[0]) + len(below_threshold_indices_b[0])))
 
-        #         if alt < rp1 or alt > ra1:
-        #             out_of_range_1.append(alt - ra1)
-        #         if alt < rp2 or alt > ra2:
-        #             out_of_range_2.append(alt - ra2)
-        #         collision_count = collision_count + 1
-        #     else:
-        #         none_count = none_count + 1
+            # Filter unique pairs (i < j)
+            below_threshold_pairs = [(i, j) for i, j in zip(*below_threshold_indices) if i < j]
+            print(f"Number of collision pairs at collision point a {len(below_threshold_pairs)}")
+            below_threshold_pairs_b = [(i, j) for i, j in zip(*below_threshold_indices_b) if i < j]
+            print(f"Number of collision pairs at collision point b {len(below_threshold_pairs_b)}")
+                
+            # Process each pair to calculate time until collision
+            collision_count = 0
+            none_count = 0
+            intersection_points = []
+            collision_times = []
+            altitudes = []
+            a_or_b = 0
+            out_of_range_1 = []
+            out_of_range_2 = []
+            saved_vars = []
 
-        #     saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
+            # Define output file
+            #output_file = f"data/collision_results_monthly_prop/collision_results_{month:02d}{year}.csv"
+            output_file = f"data/collision_results_annual_prop/collision_results_{year}.csv"
+
+            # Determine whether conjunctions occur
+            for i, j in tqdm(below_threshold_pairs, desc="Processing Pairs", unit="pair"):
+                name1, norad_id1 = sat_params[i]['name'], sat_params[i]['norad']
+                name2, norad_id2 = sat_params[j]['name'], sat_params[j]['norad']
+                a_range1 = sat_params[i]['a_range']
+                a_range2 = sat_params[j]['a_range']
+                incl1 = sat_params[i]['incl'] * 180/np.pi
+                incl2 = sat_params[j]['incl'] * 180/np.pi
+
+                # Calculate expected time until collision
+                # time_to_collision_a, intersection_point_a, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
+                time_to_collision_a, intersection_point_a, collision = time_until_collision_v2(sat_params[i], sat_params[j], T_lcm[i,j], a_or_b, t_tol)
+
+                if time_to_collision_a is not None:
+                    time_to_collision_days = time_to_collision_a/86400
+                    collision_times.append(time_to_collision_a)
+                    alt = np.linalg.norm(intersection_point_a) - earth_radius
+                    intersection_points.append(intersection_point_a)
+                    altitudes.append(alt)
+                    collision_count = collision_count + 1
+                else:
+                    # if only collecting results for objects with collisions
+                    time_to_collision_days = None
+                    alt = None
+                    none_count = none_count + 1
+                    # # if collecting results for all nodes
+                    # time_to_collision_days = None
+                    # collision_times.append(time_to_collision_a)
+                    # alt = np.linalg.norm(intersection_point_a) - earth_radius
+                    # intersection_points.append(intersection_point_a)
+                    # altitudes.append(alt)
+                    # collision_count = collision_count + 1
+
+                T_lcm_days = T_lcm[i,j]/86400
+
+                # comment out if statement if collecting results for all nodes
+                if collision == True: 
+                    saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days, incl1, incl2])
+                
+            # repeat for collision point b
+            a_or_b = 1
+            for i, j in tqdm(below_threshold_pairs_b, desc="Processing Pairs", unit="pair"):
+                name1, norad_id1 = sat_params[i]['name'], sat_params[i]['norad']
+                name2, norad_id2 = sat_params[j]['name'], sat_params[j]['norad']
+                a_range1 = sat_params[i]['a_range']
+                a_range2 = sat_params[j]['a_range']
+                incl1 = sat_params[i]['incl'] * 180/np.pi
+                incl2 = sat_params[j]['incl'] * 180/np.pi
+
+                # Calculate expected time until collision
+                # time_to_collision_a, intersection_point_a, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
+                time_to_collision_b, intersection_point_b, collision = time_until_collision_v2(sat_params[i], sat_params[j], T_lcm[i,j], a_or_b, t_tol)
+
+                if time_to_collision_b is not None:
+                    time_to_collision_days = time_to_collision_b/86400
+                    collision_times.append(time_to_collision_b)
+                    alt = np.linalg.norm(intersection_point_b) - earth_radius
+                    intersection_points.append(intersection_point_b)
+                    altitudes.append(alt)
+                    collision_count = collision_count + 1
+                else:
+                    # if only collecting results for objects with collisions
+                    time_to_collision_days = None
+                    alt = None
+                    none_count = none_count + 1
+                    # # if collecting results for all nodes
+                    # time_to_collision_days = None
+                    # collision_times.append(time_to_collision_b)
+                    # alt = np.linalg.norm(intersection_point_b) - earth_radius
+                    # intersection_points.append(intersection_point_b)
+                    # altitudes.append(alt)
+                    # collision_count = collision_count + 1
+
+                T_lcm_days = T_lcm[i,j]/86400
+                
+                # comment out if statement if collecting results for all nodes
+                if collision == True: 
+                    saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days, incl1, incl2])
 
 
-    # write saved_vars to a csv file
-    with open(output_file, mode="w", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Satellite 1","NORAD ID 1", "Altitude Range [km]", "Satellite 2", "NORAD ID 2", "Altitude Range [km]", "Conjunction Node Position [eci, km]", "Collision Point A or B", "Conjunction Point Altitude [km]", "Will they Collide?", "Time Until Collision [days]", "Synodic Period [days]", "Collision Frequency [1/days]", "Inclination of Sat 1", "Inclination of Sat 2"])
-        writer.writerows(saved_vars)
+                # writer.writerow([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_a, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
+                
+                # for i, j in tqdm(below_threshold_pairs_b, desc="Processing Pairs", unit="pair"):
+                #     tle1_line1, tle1_line2 = tle_l1[i], tle_l2[i]
+                #     tle2_line1, tle2_line2 = tle_l1[j], tle_l2[j]
+                #     name1 = obj_name[i]
+                #     name2 = obj_name[j]
+                #     norad_id1 = tle1_line2.split()[1]
+                #     norad_id2 = tle2_line2.split()[1]
+                #     a_or_b = 1
 
-    exit()
+                #     satellite1 = get_satellite(tle1_line1, tle1_line2)
+                #     satellite2 = get_satellite(tle2_line1, tle2_line2)
+                #     a1 = satellite1.model.a * earth_radius
+                #     a2 = satellite2.model.a * earth_radius
+                #     ecc1 = satellite1.model.ecco
+                #     ecc2 = satellite2.model.ecco
 
-    # with open(output_file, mode="w", newline="") as file:
-    #     writer.writerow(["Satellite 1","NORAD ID 1", "Altitude Range [km]", "Satellite 2", "NORAD ID 2", "Altitude Range [km]", "Conjunction Node Position [eci, km]", "Collision Point A or B", "Conjunction Point Altitude [km]", "Will they Collide?", "Time Until Collision [days]", "Synodic Period [days]", "Collision Frequency [1/days]"])
-    
-    # writer.writerow([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
-    # repeat line above but do it for 
-        # print(f"none count {none_count}")
-        # print(f"collision count {collision_count}")
-        # print(f"Out of Range 1 {len(out_of_range_1), max(out_of_range_1), min(out_of_range_1)}")
-        # print(f"Out of Range 2 {len(out_of_range_2), max(out_of_range_2), min(out_of_range_2)}")
+                #     rp1 = a1 * (1-ecc1) - earth_radius
+                #     ra1 = a1 * (1+ecc1) - earth_radius
+                #     rp2 = a2 * (1-ecc2) - earth_radius
+                #     ra2 = a2 * (1+ecc2) - earth_radius
+                #     a_range1 = [rp1, ra1]
+                #     a_range2 = [rp2, ra2]
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    
-    # Extract x, y, z coordinates from the points
-    x_coords = [point[0] for point in intersection_points]
-    y_coords = [point[1] for point in intersection_points]
-    z_coords = [point[2] for point in intersection_points]
-    
-    # Normalize collision times for colormap (optional, for better visual scaling)
-    #norm_collision_times = (collision_times - np.min(collision_times)) / (np.max(collision_times) - np.min(collision_times))
+                #         # Calculate expected time until collision
+                #     time_to_collision_b, intersection_point_b, T_lcm, collision = time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
+                    
+                #     alt = np.linalg.norm(intersection_point_b) - earth_radius
 
-    # Plot the points, with colors corresponding to collision times
-    collision_times_days = [time / 86400 for time in collision_times]
-    scatter = ax.scatter(x_coords, y_coords, z_coords, c=collision_times_days, cmap='viridis', marker='o')
-    
-    # Add color bar to indicate time-to-collision values
-    cbar = plt.colorbar(scatter, ax=ax, label='Expected Time to Collision (days)')
-    
-    # Add axis labels
-    ax.set_xlabel('X Coordinate')
-    ax.set_ylabel('Y Coordinate')
-    ax.set_zlabel('Z Coordinate')
-    ax.set_title('Conjunction Node Positions')
-    
-    # Show the plot
-    plt.show()
-    plt.scatter(altitudes, collision_times_days)
-    plt.xlabel('Altitude of Conjunction Node')
-    plt.ylabel('Expected Time To Collision')
-    plt.show()
-    #print(f"  Time until collision at point A: {time_to_collision_a:.2f} seconds")
+                #     if time_to_collision_b is not None:
+                #         time_to_collision_days = time_to_collision_b/86400
+                #     else:
+                #         time_to_collision_days = time_to_collision_b
+                #     T_lcm_days = T_lcm/86400
+
+                #     if time_to_collision_b is not None:
+                #         collision_times.append(time_to_collision_b)
+                #         intersection_points.append(intersection_point_b)
+                #         altitudes.append(alt)
+
+                #         if alt < rp1 or alt > ra1:
+                #             out_of_range_1.append(alt - ra1)
+                #         if alt < rp2 or alt > ra2:
+                #             out_of_range_2.append(alt - ra2)
+                #         collision_count = collision_count + 1
+                #     else:
+                #         none_count = none_count + 1
+
+                #     saved_vars.append([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
+
+
+            # write saved_vars to a csv file
+            with open(output_file, mode="w", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow(["Satellite 1","NORAD ID 1", "Altitude Range [km]", "Satellite 2", "NORAD ID 2", "Altitude Range [km]", "Conjunction Node Position [eci, km]", "Collision Point A or B", "Conjunction Point Altitude [km]", "Will they Collide?", "Time Until Collision [days]", "Synodic Period [days]", "Collision Frequency [1/days]", "Inclination of Sat 1", "Inclination of Sat 2"])
+                writer.writerows(saved_vars)
+                #exit()
+
+            # with open(output_file, mode="w", newline="") as file:
+            #     writer.writerow(["Satellite 1","NORAD ID 1", "Altitude Range [km]", "Satellite 2", "NORAD ID 2", "Altitude Range [km]", "Conjunction Node Position [eci, km]", "Collision Point A or B", "Conjunction Point Altitude [km]", "Will they Collide?", "Time Until Collision [days]", "Synodic Period [days]", "Collision Frequency [1/days]"])
+            
+            # writer.writerow([name1, norad_id1, a_range1, name2, norad_id2, a_range2, intersection_point_b, a_or_b, alt, collision, time_to_collision_days, T_lcm_days, 1/T_lcm_days])
+            # repeat line above but do it for 
+                # print(f"none count {none_count}")
+                # print(f"collision count {collision_count}")
+                # print(f"Out of Range 1 {len(out_of_range_1), max(out_of_range_1), min(out_of_range_1)}")
+                # print(f"Out of Range 2 {len(out_of_range_2), max(out_of_range_2), min(out_of_range_2)}")
+
+            """
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            
+            # Extract x, y, z coordinates from the points
+            x_coords = [point[0] for point in intersection_points]
+            y_coords = [point[1] for point in intersection_points]
+            z_coords = [point[2] for point in intersection_points]
+            
+            # Normalize collision times for colormap (optional, for better visual scaling)
+            #norm_collision_times = (collision_times - np.min(collision_times)) / (np.max(collision_times) - np.min(collision_times))
+
+            # Plot the points, with colors corresponding to collision times
+            collision_times_days = [time / 86400 for time in collision_times]
+            scatter = ax.scatter(x_coords, y_coords, z_coords, c=collision_times_days, cmap='viridis', marker='o')
+            
+            # Add color bar to indicate time-to-collision values
+            cbar = plt.colorbar(scatter, ax=ax, label='Expected Time to Collision (days)')
+            
+            # Add axis labels
+            ax.set_xlabel('X Coordinate')
+            ax.set_ylabel('Y Coordinate')
+            ax.set_zlabel('Z Coordinate')
+            ax.set_title('Conjunction Node Positions')
+            
+            # Show the plot
+            plt.show()
+            plt.scatter(altitudes, collision_times_days)
+            plt.xlabel('Altitude of Conjunction Node')
+            plt.ylabel('Expected Time To Collision')
+            plt.show()
+            #print(f"  Time until collision at point A: {time_to_collision_a:.2f} seconds")
+            """
 
 
 def time_until_collision_v2(sat_params1, sat_params2, T_lcm, a_or_b, t_tol):
@@ -589,8 +639,10 @@ def time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
 
         satellite1 = get_satellite(tle1_line1, tle1_line2)
         satellite2 = get_satellite(tle2_line1, tle2_line2)
-        M1 = np.deg2rad(satellite1.model.mo)
-        M2 = np.deg2rad(satellite2.model.mo)
+        #M1 = np.deg2rad(satellite1.model.mo)
+        #M2 = np.deg2rad(satellite2.model.mo)
+        M1 = satellite1.model.mo
+        M2 = satellite2.model.mo
         ecc1 = satellite1.model.ecco
         ecc2 = satellite2.model.ecco
         a1 = satellite1.model.a * earth_radius
@@ -1289,6 +1341,29 @@ def position_of_sat(satellite, delta_t):
     # Combined rotation matrix
     r_eci = R3_W @ R1_i @ R3_w @ r_perifocal
     return r_eci
+
+def propagate_keplerian(a, e, i, RAAN, omega, M0, t_0, t):
+    """
+    Propagates the orbital elements using Kepler's equation.
+
+    Args:
+        input_oe (numpy.ndarray): Initial orbital elements [a, e, i, RAAN, omega, M].
+        param (dict): Dictionary containing parameters like mu, t, and t_0.
+
+    Returns:
+        numpy.ndarray: Propagated orbital elements [a, e, i, RAAN, omega, M].
+    """
+
+    # Mean motion
+    n = np.sqrt(mu) * a**(-3/2)
+
+    dt = (t - t_0).total_seconds()  # Time difference in seconds
+
+    M_no_wrap = M0 + n * (dt)  # Mean anomaly at time t
+    M = np.mod(M_no_wrap, 2 * np.pi)  # Wrap to [0, 2*pi]
+
+    return a, e, i, RAAN, omega, M
+
 
 if __name__ == '__main__':
     main()

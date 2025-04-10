@@ -52,9 +52,8 @@ def generate_and_write_tles(file_name, inclination_range, semi_major_axis_range)
                 norad_id += 1
 
 # Define ranges for inclination and semi-major axis
-inclination_range = np.arange(0, 111, 5)  # Whole number degrees from 0 to 110 degrees
-semi_major_axis_range = np.arange(300, 2001, 10) + earth_radius  # Semi-major axis from 300 km to 2000 km at 50 km intervals
-print(semi_major_axis_range)
+inclination_range = np.arange(0, 115, 5)  # Whole number degrees from 0 to 110 degrees
+semi_major_axis_range = np.arange(300, 2010, 10) + earth_radius  # Semi-major axis from 300 km to 2000 km at 50 km intervals
 
 # Generate TLEs and write to a file
 generate_and_write_tles("generated_tles.txt", inclination_range, semi_major_axis_range)
