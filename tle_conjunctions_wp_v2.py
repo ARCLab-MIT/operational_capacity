@@ -30,23 +30,24 @@ def main():
 
     # load txt file with TLEs and read them
     # check to see if sat_params.pkl exists, if not, create it
-    years = np.arange(2025, 2026, 1)
-    months = np.arange(1, 2, 1)  # Use specific months or range: np.arange(1, 13, 1)
+    years = np.arange(2019, 2025, 1)
+    months = np.arange(1, 13, 1)  # Use specific months or range: np.arange(1, 13, 1)
     for year in years: 
         for month in months:
             print(f"Month: {month}, Year: {year}")
-            if year == 2025 and month > 2:
-                break
-            print(str(month) + '/' + str(year))
             try:
                 sat_params = []
-                sat_params = pickle.load(open('data/sat_params_annual_prop/sat_params_' + str(year) + '.pkl', 'rb'))
-                #sat_params = pickle.load(open(f"data/sat_params_monthly_prop/sat_params_{month:02d}{year}.pkl", "rb"))
+                #sat_params = pickle.load(open('data/sat_params_annual_prop/sat_params_' + str(year) + '_no_artifical_tles.pkl', 'rb'))
+                #sat_params = pickle.load(open(f"data/sat_params_monthly_prop/starlink_artificial/sat_params_{month:02d}{year}.pkl", "rb"))
+                #sat_params = pickle.load(open(f"data/sat_params_monthly_prop/starlink_only.pkl", "rb"))
+                sat_params = pickle.load(open(f"data/sat_params_monthly_prop/only_real/sat_params_{month:02d}{year}.pkl", "rb"))
                 print('Loading satellite params from file!')
 
             except FileNotFoundError:
-                tle_file = open('data/batch_tles_annual/' + str(year)+'.txt', 'r')
-                #tle_file = open(f"data/batch_tles_monthly/{month:02d}{year}.txt", "r")
+                #tle_file = open('data/batch_tles_annual/' + str(year)+'_no_artificial_tles.txt', 'r')
+                #tle_file = open(f"data/batch_tles_monthly/starlink_artificial/{month:02d}{year}.txt", "r")
+                #tle_file = open(f"data/batch_tles_monthly/filtered_starlink_tles.txt", "r")
+                tle_file = open(f"data/batch_tles_monthly/only_real/{month:02d}{year}.txt", "r")
                 tle_lines = tle_file.readlines()
 
                 print('No sat param file found. Loading TLE parameters...')
@@ -137,8 +138,9 @@ def main():
                 print(len(tle_lines)/3)
                 print(f"sat params length {len(sat_params)}")
 
-                with open('data/sat_params_annual_prop/sat_params_' + str(year) + '.pkl', 'wb') as f:
-                #with open(f"data/sat_params_monthly_prop/sat_params_{month:02d}{year}.pkl", "wb") as f:
+                #with open('data/sat_params_annual_prop/sat_params_' + str(year) + '_no_artificial_tles.pkl', 'wb') as f:
+                #with open(f"data/sat_params_monthly_prop/starlink_artificial/sat_params_{month:02d}{year}.pkl", "wb") as f:
+                with open(f"data/sat_params_monthly_prop/only_real/sat_params_{month:02d}{year}.pkl", "wb") as f:
                     pickle.dump(sat_params, f)
 
 
@@ -148,8 +150,10 @@ def main():
 
             # Check to see if data file already exists
             try:
-                with open('data/conj_params_annual_prop/conj_params_' + str(year) + '.pkl', 'rb') as f:
-                #with open(f"data/conj_params_monthly_prop/conj_params_{month:02d}{year}.pkl", "rb") as f:
+                #with open('data/conj_params_annual_prop/conj_params_' + str(year) + 'no_artificial_tles.pkl', 'rb') as f:
+                #with open(f"data/conj_params_monthly_prop/starlink_artificial/conj_params_{month:02d}{year}.pkl", "rb") as f:
+                with open(f"data/conj_params_monthly_prop/only_real/conj_params_{month:02d}{year}.pkl", "rb") as f:
+                #with open(f"data/conj_params_monthly_prop/starlink_only.pkl", "rb") as f:
                     dist_a, dist_b, alt_a, alt_b, T_lcm = pickle.load(f)
                     print('Loading conjunction parameters from file!')
 
@@ -232,10 +236,11 @@ def main():
 
                 # Save the results to a file
                 try:
-                    with open('data/conj_params_annual_prop/conj_params_' + str(year) + '.pkl', 'wb') as f:
-                    #with open(f"data/conj_params_monthly_prop/conj_params_{month:02d}{year}.pkl", "wb") as f:
+                    #with open('data/conj_params_annual_prop/conj_params_' + str(year) + '_no_artificial_tles.pkl', 'wb') as f:
+                    with open(f"data/conj_params_monthly_prop/only_real/conj_params_{month:02d}{year}.pkl", "wb") as f:
+                    #with open(f"data/conj_params_monthly_prop/starlink_only.pkl", "wb") as f:
                         pickle.dump((dist_a, dist_b, alt_a, alt_b, T_lcm), f)
-                        print(f"File 'data/conj_params_{year}.pkl' created!")
+                        print(f"File 'data/conj_params_{year}_no_artificial_tles.pkl' created!")
                 except OSError as e:
                     if e.errno == 28:
                         print("Error: No space left on device. Please free up some space and try again.")
@@ -303,11 +308,23 @@ def main():
             t_tol = 1 # seconds of miss distance
             LEO_cutoff = 2000 + earth_radius # km
 
+            print(f"Average distance between intersection points 1a and 2a: {np.nanmean(dist_a)}")
+            print(f"Maximum distance between intersection points 1a and 2a: {np.nanmax(dist_a)}")
+            print(f"Minimum distance between intersection points 1a and 2a: {np.nanmin(dist_a)}")
+            print(f"Average distance between intersection points 1b and 2b: {np.nanmean(dist_b)}")
+            print(f"Maximum distance between intersection points 1b and 2b: {np.nanmax(dist_b)}")
+            print(f"Minimum distance between intersection points 1b and 2b: {np.nanmin(dist_b)}")
+            count_dist_a = np.sum(dist_a < 0.1)
+            count_dist_b = np.sum(dist_b < 0.1)
+            print(f"Number of items in dist_a less than 0.1: {count_dist_a}")
+            print(f"Number of items in dist_b less than 0.1: {count_dist_b}")
+
             # Find pairs of satellites with distances below the threshold
             print("Number of conjunctions before filtering: ", str(len(sat_params)**2))
             below_threshold_indices = np.where((dist_a < threshold) & (0.2*24*3600 < T_lcm) & (alt_a < LEO_cutoff))#(T_lcm < 90*24*3600)& 
             below_threshold_indices_b = np.where((dist_b < threshold) &  (0.2*24*3600 < T_lcm) & (alt_b < LEO_cutoff)) #(T_lcm < 90*24*3600) &
             print("Number of conjunctions after filtering: ", str(len(below_threshold_indices[0]) + len(below_threshold_indices_b[0])))
+
 
             # Filter unique pairs (i < j)
             below_threshold_pairs = [(i, j) for i, j in zip(*below_threshold_indices) if i < j]
@@ -328,7 +345,9 @@ def main():
 
             # Define output file
             #output_file = f"data/collision_results_monthly_prop/collision_results_{month:02d}{year}.csv"
-            output_file = f"data/collision_results_annual_prop/collision_results_{year}.csv"
+            #output_file = f"data/collision_results_annual_prop/collision_results_{year}_no_artificial_tles.csv"
+            output_file = f"data/collision_results_monthly_prop/only_real/collision_results_{month:02d}{year}.csv"
+            #output_file = f"data/collision_results_monthly_prop/starlink_only.csv"
 
             # Determine whether conjunctions occur
             for i, j in tqdm(below_threshold_pairs, desc="Processing Pairs", unit="pair"):
@@ -726,7 +745,7 @@ def time_until_collision(tle1_line1, tle1_line2, tle2_line1, tle2_line2, a_or_b)
         '''
 
         while i < len(t1a) and j < len(t2a):
-            if np.abs(t1a[i] - t2a[j]) <= 0.1: #0.1 seconds, collision threshold
+            if np.abs(t1a[i] - t2a[j]) <= 1: #0.1 seconds, collision threshold
                 # If within threshold, add to the result
                 break
             elif t1a[i] < t2a[j]:
