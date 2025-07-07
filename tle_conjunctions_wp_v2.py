@@ -30,9 +30,15 @@ def main():
 
     # load txt file with TLEs and read them
     # check to see if sat_params.pkl exists, if not, create it
-    years = np.arange(2019, 2025, 1)
-    months = np.arange(1, 13, 1)  # Use specific months or range: np.arange(1, 13, 1)
+    years = [2023, 2024, 2025]#np.arange(2021, 2025, 1)
+    # months = []#np.arange(1, 13, 1)  # Use specific months or range: np.arange(1, 13, 1)
     for year in years: 
+        if year == 2023:
+            months = [7]
+        elif year == 2024:
+            months = [1,7]
+        elif year == 2025:
+            months = [1]
         for month in months:
             print(f"Month: {month}, Year: {year}")
             try:
