@@ -36,7 +36,8 @@ def eci2lla(x,y,z, t_dt):
     return g.latitude.degrees, g.longitude.degrees, g.elevation.m
 
 # data = read_csv("data/collision_results_wp_0p1_1.csv")  
-data = read_csv('data/collision_results_mh_test.csv')
+data = read_csv('data/collision_results_annual_prop/skip_same_name/collision_results_2025.csv')
+#data = read_csv('col_result_6month/collision_results_012025.csv')
 
 # for each line in the data file, check to see if the synodic period is less than 90 days. If so, keep it, otherwise discard it.
 # data_shortened = []
@@ -113,7 +114,7 @@ freq_col = (data_np[1:, 12]).astype(float)*(365.25/12) # collision frequency per
 plt.figure()
 plt.hist(t_s[ttc != 0], bins = 100)
 plt.xlabel('LCM Period (days)')
-plt.show()
+#plt.show()
 
 t_s_no = t_s[t_s != 0]
 t_s_no_s = t_s_no[t_s_no < 90]
@@ -124,6 +125,18 @@ r = np.sqrt(cnode_pos[:, 0]**2 + cnode_pos[:, 1]**2 + cnode_pos[:, 2]**2)
 # Compute the latitude
 latitude = np.arcsin(cnode_pos[:, 2] / r) * (180 / np.pi)  # Convert from radians to degrees
 
+lat_dict = {}
+for i in range(len(norad1)):
+    if norad1[i] not in lat_dict:
+        lat_dict[norad1[i]] = latitude[i]
+    else:
+        continue
+for i in range(len(norad2)):
+    if norad2[i] not in lat_dict:
+        lat_dict[norad2[i]] = latitude[i]
+    else:
+        continue
+
 
 # convert cnode_pos to cnode_pos_lla, and make a histogram of cnodes by latitude
 # cnode_pos_lla = np.zeros((len(cnode_pos), 3))
@@ -133,15 +146,22 @@ latitude = np.arcsin(cnode_pos[:, 2] / r) * (180 / np.pi)  # Convert from radian
 #     print(i/len(cnode_alt)*100, '% done')
 
 
+# when including ETTC
 # remove zero entries from ttc
 idx_y_col = np.where(ttc != 0 )
 # idx_y_col_sml = np.where((ttc != 0))
 idx_y_col_sml = np.where((ttc != 0) & (ttc < t_s))
 ttc_filt = ttc[idx_y_col_sml]
 t_s_y_col = t_s[idx_y_col_sml]
-# cnode_pos = cnode_pos[idx_y_col,:]
-# ttc_s = ttc[idx_y_col_sml]
 
+# # when not including ETTC
+# idx_y_col = np.arange(len(ttc))
+# idx_y_col_sml = np.arange(len(ttc))
+# ttc_filt = ttc[idx_y_col_sml]
+# t_s_y_col = t_s[idx_y_col_sml]
+
+print("latitude")
+print(latitude[idx_y_col_sml])
 
 plt_figs = True
 if plt_figs == True:
@@ -164,7 +184,7 @@ if plt_figs == True:
     # make a 3d scatter plot of cnode_pos, where the color is determined by col_freq
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    sc = ax.scatter(cnode_pos[:, 0], cnode_pos[:, 1], cnode_pos[:, 2], s = 2, c='r')
+    sc = ax.scatter(cnode_pos[:, 0], cnode_pos[:, 1], cnode_pos[:, 2], s = 0.5, c='r')
     # plot a 3D sphere for the earth
     u, v = np.mgrid[0:2*np.pi:100j, 0:np.pi:500j]
     x = r_e*np.cos(u)*np.sin(v)
@@ -192,8 +212,10 @@ if plt_figs == True:
     plt.show()
 
     # make a histogram of conjunction frequency
-    plt.figure(figsize = (4,3))
-    plt.hist(col_freq, bins = 200, color = 'firebrick', alpha = 0.5)
+    #cutoff = np.percentile(col_freq, 99)  # 99th percentile
+    plt.figure(figsize=(4, 3))
+    plt.hist(col_freq, bins=200, color='firebrick', alpha=0.5)
+    plt.xlim(0, 4)
     plt.yscale('log')
     plt.xlabel('Nodal conjunction frequency (monthly)')
     plt.ylabel('Count')
@@ -201,7 +223,7 @@ if plt_figs == True:
     plt.show()
 
     plt.figure(figsize = (4,3))
-    plt.plot(latitude[idx_y_col_sml], col_freq, '.', markersize = 4, color = 'firebrick', alpha = 0.5)
+    plt.plot(latitude[idx_y_col_sml], col_freq, '.', markersize = 1, color = 'firebrick', alpha = 0.5)
     plt.xlabel('Latitude (deg)')
     plt.ylim(0,2)
     plt.ylabel('Nodal conjunction frequency (monthly)')
@@ -247,7 +269,7 @@ if plt_figs == True:
     # plt.show()
 
     plt.figure(figsize = (4,3))
-    plt.plot(cnode_alt[idx_y_col_sml], col_freq, '.', markersize = 2, color = 'darkcyan', alpha = 0.5)
+    plt.plot(cnode_alt[idx_y_col_sml], col_freq, '.', markersize = 1, color = 'darkcyan', alpha = 0.5)
     plt.xlabel('Altitude (km)')
     plt.ylim(0,2)
     plt.ylabel('Conjunction frequency (monthly)')
@@ -416,47 +438,50 @@ print("artificial objects")
 # Data containers
 altitudes = []
 inclinations = []
+latitudes = []
 conjunction_frequencies = []
 
-# Extract satellite data for NORAD IDs ≥ 90000
 for i in range(len(norad)):
-    if norad[i] >= 90000 and norad[i] in alt_range_dict and norad[i] in incl_dict:
+    if norad[i] in alt_range_dict and norad[i] in incl_dict and norad[i] in lat_dict:
         avg_altitude = np.mean(alt_range_dict[norad[i]])  # Compute average altitude
         
         # Store extracted data
         altitudes.append(avg_altitude)
         inclinations.append(incl_dict[norad[i]])
+        latitudes.append(lat_dict[norad[i]])
         conjunction_frequencies.append(sum_conj_freq[i])
 
 # Convert to NumPy arrays
 altitudes = np.array(altitudes)
 inclinations = np.array(inclinations)
+latitudes = np.array(latitudes)
 conjunction_frequencies = np.array(conjunction_frequencies)
 
 # Define grid resolution for heatmap
-alt_bins = np.linspace(min(altitudes), max(altitudes), 50)  # 50 altitude bins
+alt_bins = np.linspace(300, 2000, 50)  # 50 altitude bins
 inc_bins = np.linspace(min(inclinations), max(inclinations), 50)  # 50 inclination bins
+lat_bins = np.linspace(-90, 90, 90)  # 50 latitude bins
 
 # Compute 2D histogram (heatmap data)
-heatmap, xedges, yedges = np.histogram2d(altitudes, inclinations, bins=[alt_bins, inc_bins], weights=conjunction_frequencies)
+heatmap, xedges, yedges = np.histogram2d(altitudes, latitudes, bins=[alt_bins, lat_bins], weights=conjunction_frequencies)
 
 # Normalize heatmap values
 heatmap = np.nan_to_num(heatmap)  # Replace NaNs with 0
 
-# Create a custom colormap where 0 is a light blue and the rest follow 'plasma'
+vmin, vmax = 0, 10
 cmap = plt.cm.plasma
 cmap_colors = cmap(np.linspace(0, 1, 256))
-cmap_colors[0] = np.array([173/255, 216/255, 230/255, 1])  # Light blue for 0 conjunctions
 custom_cmap = mcolors.ListedColormap(cmap_colors)
 
-### **Plot Heatmap**
 plt.figure(figsize=(9, 6))
-plt.pcolormesh(xedges, yedges, heatmap.T, cmap=custom_cmap, shading='auto')
-cbar = plt.colorbar(label='Conjunction Frequency')
+heatmap_plot = plt.pcolormesh(alt_bins, lat_bins, heatmap.T, cmap=custom_cmap, shading='auto', vmin=vmin, vmax=vmax)
+cbar = plt.colorbar(heatmap_plot, label='Conjunction Frequency')
 cbar.ax.set_yticklabels([f"{int(tick)}" for tick in cbar.get_ticks()])  # Format ticks as integers
+
+# Labels and title
 plt.xlabel('Altitude (km)', fontsize=12)
-plt.ylabel('Inclination (degrees)', fontsize=12)
-plt.title('Heatmap of Altitude vs Inclination', fontsize=14)
+plt.ylabel('Latitude (degrees)', fontsize=12)
+plt.title(f'Heatmap of Altitude vs Latitude - 01, 2025', fontsize=14)
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.show()
 
@@ -488,24 +513,39 @@ plt.show()
 
 sum_conj_freq_full = np.zeros(26802)
 sum_conj_freq_full[:len(sum_conj_freq)] = sum_conj_freq
+#np.savetxt('sum_conj_freq_full_2019.txt', sum_conj_freq_full)
+#np.savetxt('sum_conj_freq_full_2022.txt', sum_conj_freq_full)
+
 plt.figure(figsize = (3.5,4))
-plt.ecdf(sum_conj_freq_full, color = 'darkcyan', linewidth = 2)
+loaded_freq1 = np.loadtxt('sum_conj_freq_full_2019.txt')
+loaded_freq2 = np.loadtxt('sum_conj_freq_full_2022.txt')
+#plt.ecdf(loaded_freq1, color='purple', linewidth=2, label='January 2019')
+#plt.ecdf(loaded_freq2, color='orange', linewidth=2, label='January 2022')
+plt.ecdf(sum_conj_freq_full, color = 'darkcyan', linewidth = 2, label='January 2025')
 plt.grid(axis = 'both', color = 'gray', linewidth = 0.25)
 plt.axvline(x = 10, color = 'r', linestyle = '--', linewidth = 2)
 plt.ylabel('Cumulative probability')
 plt.xlabel('Sat. conj. freq. (monthly)')
 plt.ylim(0,1)
 plt.xlim(-0.25,5.5)
+plt.legend()
 plt.tight_layout()
 plt.savefig('figures/10.pdf')
 plt.show()
 
+print("CDF Values")
+print(len(sum_conj_freq_full))
+print(sum_conj_freq_full)
+
 plt.figure(figsize = (3.7,4))
-plt.ecdf(sum_conj_freq_full, color = 'darkcyan', linewidth = 2)
+#plt.ecdf(loaded_freq1, color='purple', linewidth=2, label='January 2019')
+#plt.ecdf(loaded_freq2, color='orange', linewidth=2, label='January 2022')
+plt.ecdf(sum_conj_freq_full, color = 'darkcyan', linewidth = 2, label='January 2025')
 plt.grid(axis = 'both', color = 'gray', linewidth = 0.25)
 plt.ylim(0.99,1)
 plt.ylabel('Cumulative probability')
 plt.xlabel('Sat. conj. freq. (monthly)')
+plt.legend()
 plt.tight_layout()
 plt.savefig('figures/11.pdf')
 plt.show()
